@@ -2260,6 +2260,7 @@ Ext.define('PVE.ups.ShutdownRules', {
                 auto_start:          me.down('[name=auto_start]').getValue() ? 1 : 0,
             },
             success: function () {
+                Ext.toast(gettext('Settings saved.'));
                 me._loadData();
             },
             failure: function (response) {
@@ -2707,7 +2708,10 @@ Ext.define('PVE.ups.Notify', {
             url: '/nodes/' + me.nodename + '/ups/notify',
             method: 'PUT',
             params: { rules: JSON.stringify(rules) },
-            success: function () { me._loadData(); },
+            success: function () {
+                Ext.toast(gettext('Settings saved.'));
+                me._loadData();
+            },
             failure: function (response) {
                 Ext.Msg.alert(gettext('Error'),
                     ((response.result || {}).message) || gettext('Save failed'));
