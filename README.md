@@ -41,7 +41,7 @@ Additional capabilities:
 Download the latest `.deb` from the [Releases](../../releases) page and install:
 
 ```bash
-dpkg -i pve-ups-panel_<version>_all.deb
+apt install ./pve-ups-panel_<version>_all.deb
 ```
 
 ### Build from Source
@@ -56,7 +56,7 @@ cd proxmox-ups-panel
 make deb
 
 # Install
-dpkg -i pve-ups-panel_<version>_all.deb
+apt install ./pve-ups-panel_<version>_all.deb
 ```
 
 After installation, refresh the Proxmox VE web UI. The **UPS** tab will appear in the node page.
