@@ -8,7 +8,7 @@ pve-ups-panel (2.1.3) stable; urgency=low
     pve-ups-panel-rrdcollect.timer removed; service depends on
     multi-user.target instead of timers.target.
 
- -- PVE UPS Panel Maintainer <admin@localhost>  Thu, 29 May 2026 04:00:00 +0800
+ -- YoMin Su <aaaa1234567891016@gmail.com>  Thu, 29 May 2026 04:00:00 +0800
 
 pve-ups-panel (2.1.2) stable; urgency=low
 
@@ -19,7 +19,7 @@ pve-ups-panel (2.1.2) stable; urgency=low
     initComponent; by injecting at insertNodes time our tab is present
     when PVE looks it up, so no second setSelection is required.
 
- -- PVE UPS Panel Maintainer <admin@localhost>  Thu, 29 May 2026 03:00:00 +0800
+ -- YoMin Su <aaaa1234567891016@gmail.com>  Thu, 29 May 2026 03:00:00 +0800
 
 pve-ups-panel (2.1.1) stable; urgency=low
 
@@ -27,7 +27,7 @@ pve-ups-panel (2.1.1) stable; urgency=low
     rules are applied to already-connected USB UPS devices. --action=change
     (the default) does not reliably update /dev node ownership on all kernels.
 
- -- PVE UPS Panel Maintainer <admin@localhost>  Thu, 29 May 2026 02:00:00 +0800
+ -- YoMin Su <aaaa1234567891016@gmail.com>  Thu, 29 May 2026 02:00:00 +0800
 
 pve-ups-panel (2.1.0) stable; urgency=low
 
@@ -38,7 +38,7 @@ pve-ups-panel (2.1.0) stable; urgency=low
   * postinst/prerm: reload udev rules and re-trigger USB subsystem on
     install and removal.
 
- -- PVE UPS Panel Maintainer <admin@localhost>  Thu, 29 May 2026 01:00:00 +0800
+ -- YoMin Su <aaaa1234567891016@gmail.com>  Thu, 29 May 2026 01:00:00 +0800
 
 pve-ups-panel (2.0.0) stable; urgency=low
 
@@ -68,7 +68,7 @@ pve-ups-panel (2.0.0) stable; urgency=low
   * Packaging: dpkg-divert for Nodes.pm and index.html.tpl, systemd
     timer for RRD collection, full prerm/postinst lifecycle.
 
- -- PVE UPS Panel Maintainer <admin@localhost>  Thu, 29 May 2026 00:00:00 +0800
+ -- YoMin Su <aaaa1234567891016@gmail.com>  Thu, 29 May 2026 00:00:00 +0800
 
 pve-ups-panel (1.0.0) stable; urgency=low
 
@@ -79,4 +79,4 @@ pve-ups-panel (1.0.0) stable; urgency=low
   * Settings wizard: standalone / netclient / netserver modes.
   * USB UPS auto-detection via lsusb (CyberPower, APC).
 
- -- PVE UPS Panel Maintainer <admin@localhost>  Mon, 26 May 2026 21:00:00 +0800
+ -- YoMin Su <aaaa1234567891016@gmail.com>  Mon, 26 May 2026 21:00:00 +0800

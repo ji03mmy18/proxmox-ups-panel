@@ -1,7 +1,7 @@
 Source: pve-ups-panel
 Section: admin
 Priority: optional
-Maintainer: PVE UPS Panel Maintainer <admin@localhost>
+Maintainer: YoMin Su <aaaa1234567891016@gmail.com>
 Build-Depends: debhelper (>= 12)
 Standards-Version: 4.5.1
 Rules-Requires-Root: no
