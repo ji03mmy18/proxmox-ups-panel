@@ -471,15 +471,21 @@ Ext.define('PVE.ups.SetupWizard', {
                                 margin: '10 0 0 164',
                                 handler: function () {
                                     var btn = this;
-                                    var host = me.down('[name=nutHost]');
-                                    var port = me.down('[name=nutPort]');
-                                    var ups  = me.down('[name=upsNameRemote]');
+                                    var host     = me.down('[name=nutHost]');
+                                    var port     = me.down('[name=nutPort]');
+                                    var ups      = me.down('[name=upsNameRemote]');
+                                    var resultCt = me.down('[itemId=connTestResult]');
                                     if (!host || !host.getValue()) {
                                         Ext.Msg.alert(gettext('Error'),
                                             gettext('Please enter a NUT server address.'));
                                         return;
                                     }
                                     btn.setDisabled(true);
+                                    resultCt.update(
+                                        '<span class="fa fa-spinner fa-spin" style="margin-right:6px"></span>' +
+                                        gettext('Testing...')
+                                    );
+                                    resultCt.setVisible(true);
                                     Proxmox.Utils.API2Request({
                                         url: '/nodes/' +
                                              encodeURIComponent(me.nodename) +
@@ -494,23 +500,33 @@ Ext.define('PVE.ups.SetupWizard', {
                                             btn.setDisabled(false);
                                             var d = ((response.result || {}).data) || {};
                                             if (d.success) {
-                                                Ext.Msg.alert(
-                                                    gettext('Connection Successful'),
-                                                    Ext.String.htmlEncode(d.message)
+                                                resultCt.update(
+                                                    '<span class="fa fa-check-circle" style="color:#21bf73;margin-right:6px"></span>' +
+                                                    '<span style="color:#21bf73">' + gettext('Connection successful') + '</span>'
                                                 );
                                             } else {
-                                                Ext.Msg.alert(
-                                                    gettext('Connection Failed'),
-                                                    Ext.String.htmlEncode(d.message)
+                                                resultCt.update(
+                                                    '<span class="fa fa-times-circle" style="color:#e74c3c;margin-right:6px"></span>' +
+                                                    '<span style="color:#e74c3c">' + Ext.String.htmlEncode(d.message) + '</span>'
                                                 );
                                             }
                                         },
                                         failure: function (response) {
                                             btn.setDisabled(false);
-                                            Ext.Msg.alert(gettext('Error'), response.htmlStatus);
+                                            resultCt.update(
+                                                '<span class="fa fa-times-circle" style="color:#e74c3c;margin-right:6px"></span>' +
+                                                '<span style="color:#e74c3c">' + gettext('Request failed') + '</span>'
+                                            );
                                         },
                                     });
                                 },
+                            },
+                            {
+                                xtype: 'container',
+                                itemId: 'connTestResult',
+                                margin: '6 0 0 164',
+                                hidden: true,
+                                html: '',
                             },
                         ],
                     },
