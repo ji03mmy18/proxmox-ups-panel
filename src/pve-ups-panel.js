@@ -1533,6 +1533,7 @@ Ext.define('PVE.ups.History', {
         me._rrdStore = Ext.create('Proxmox.data.RRDStore', {
             rrdurl: '/api2/json/nodes/' + me.nodename + '/ups/rrddata',
             model: 'pve-ups-rrd',
+            interval: 60000,
             // Override setRRDUrl to inject the ups parameter
             setRRDUrl: function (timeframe, cf) {
                 if (!timeframe) timeframe = this.timeframe;
@@ -1553,8 +1554,9 @@ Ext.define('PVE.ups.History', {
                 listeners: {
                     devicechange: function (sel, val) {
                         me.upsName = val;
+                        me._rrdStore.stopUpdate();
                         me._rrdStore.setRRDUrl();
-                        me._rrdStore.load();
+                        me._rrdStore.startUpdate();
                     },
                     refresh: function () { me._rrdStore.load(); },
                     manage: function () {
@@ -1614,7 +1616,10 @@ Ext.define('PVE.ups.History', {
 
         me.on('activate', function () {
             me._rrdStore.setRRDUrl();
-            me._rrdStore.load();
+            me._rrdStore.startUpdate();
+        });
+        me.on('deactivate', function () {
+            me._rrdStore.stopUpdate();
         });
 
         me.callParent();
