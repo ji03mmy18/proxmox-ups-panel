@@ -2678,7 +2678,7 @@ Ext.define('PVE.ups.Notify', {
                 var merged = me._getDefaultRules().map(function (def) {
                     var s = ruleMap[def.event];
                     if (!s) return def;
-                    return Ext.apply({}, def, {
+                    return Object.assign({}, def, {
                         enabled:   s.enabled !== undefined ? !!s.enabled : def.enabled,
                         targets:   s.targets  || [],
                         threshold: s.threshold !== undefined ? s.threshold : def.threshold,
