@@ -144,7 +144,20 @@ with open(path, 'w') as f:
     f.writelines(lines)
 PYEOF
 
-        # ── 5. Enable RRD collector service ───────────────────────────────
+        # ── 5. Set up sudoers for pve-ups-notify ─────────────────────────
+        # Allow the nut user to run only the notify hook as root,
+        # preserving the two env vars that NUT sets on each event.
+        cat > /etc/sudoers.d/pve-ups-panel << 'SUDOEOF'
+Defaults!/usr/lib/pve-ups-panel/pve-ups-notify env_keep += "NOTIFYTYPE UPSNAME"
+nut ALL=(root) NOPASSWD: /usr/lib/pve-ups-panel/pve-ups-notify
+SUDOEOF
+        chmod 0440 /etc/sudoers.d/pve-ups-panel
+
+        # ── 5b. Create event log directory ───────────────────────────────
+        mkdir -p /var/log/pve-ups-panel
+        chmod 755 /var/log/pve-ups-panel
+
+        # ── 6. Enable RRD collector service ───────────────────────────────
         chmod +x /usr/lib/pve-ups-panel/pve-ups-rrd-collect
         systemctl daemon-reload
         systemctl enable pve-ups-panel-rrdcollect.service

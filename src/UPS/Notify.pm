@@ -16,12 +16,12 @@ use base qw(PVE::RESTHandler);
 my $CONFIG_FILE = '/etc/pve-ups-panel/notify-rules.json';
 my $CONFIG_DIR  = '/etc/pve-ups-panel';
 my $UPSMON_CONF = '/etc/nut/upsmon.conf';
-my $NOTIFY_CMD  = '/usr/lib/pve-ups-panel/pve-ups-notify';
+my $NOTIFY_CMD  = '/usr/bin/sudo -n /usr/lib/pve-ups-panel/pve-ups-notify';
 
-# NUT 支援 NOTIFYFLAG 的標準事件
+# NUT 支援 NOTIFYFLAG 的標準事件（OVERLOAD 是驅動層概念，upsmon 不接受）
 my %NUT_EVENTS = map { $_ => 1 } qw(
     ONLINE ONBATT LOWBATT FSD COMMOK COMMBAD
-    SHUTDOWN REPLBATT NOCOMM NOPARENT OVERLOAD
+    SHUTDOWN REPLBATT NOCOMM NOPARENT
 );
 
 my $DEFAULT_RULES = [
@@ -165,9 +165,9 @@ __PACKAGE__->register_method({
         eval { _update_upsmon_conf($rules) };
         warn "Failed to update upsmon.conf: $@\n" if $@;
 
-        # 若 nut-client 正在執行，重啟以套用新的 NOTIFYFLAG
-        system('systemctl', 'is-active', '--quiet', 'nut-client') == 0
-            and system('systemctl', 'restart', 'nut-client');
+        # 若 nut-monitor 正在執行，重啟以套用新的 NOTIFYFLAG
+        system('systemctl', 'is-active', '--quiet', 'nut-monitor') == 0
+            and system('systemctl', 'restart', 'nut-monitor');
 
         return undef;
     },

@@ -8,7 +8,7 @@ Rules-Requires-Root: no
 
 Package: pve-ups-panel
 Architecture: all
-Depends: pve-manager (>= 7.0), nut-client, python3, libjson-perl, librrds-perl
+Depends: pve-manager (>= 7.0), nut-client, sudo, python3, libjson-perl, librrds-perl
 Recommends: nut-server
 Description: UPS management panel for Proxmox VE
  Adds a full UPS management interface to the Proxmox VE node page via

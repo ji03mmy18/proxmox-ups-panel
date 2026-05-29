@@ -7,9 +7,22 @@ use warnings;
 use JSON;
 use POSIX qw(strftime);
 
-my $event    = $ENV{NOTIFYTYPE} // 'UNKNOWN';
+# Whitelist of valid NUT notification types — reject anything else
+my %VALID_EVENTS = map { $_ => 1 } qw(
+    ONLINE ONBATT LOWBATT FSD COMMOK COMMBAD
+    SHUTDOWN REPLBATT NOCOMM NOPARENT
+);
+
+my $event    = $ENV{NOTIFYTYPE} // '';
 my $ups_name = $ENV{UPSNAME}    // 'ups';
-my $ts       = strftime('%Y-%m-%dT%H:%M:%S', localtime);
+
+exit 0 unless $VALID_EVENTS{$event};
+
+# Sanitize ups_name: allow only characters valid in NUT device names
+$ups_name =~ s/[^A-Za-z0-9_\@\.\-]//g;
+$ups_name ||= 'ups';
+
+my $ts = strftime('%Y-%m-%dT%H:%M:%S', localtime);
 
 my $log_dir  = '/var/log/pve-ups-panel';
 my $log_file = "$log_dir/events.log";

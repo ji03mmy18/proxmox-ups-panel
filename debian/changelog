@@ -1,3 +1,25 @@
+pve-ups-panel (2.1.5) stable; urgency=high
+
+  * pve-ups-notify: run via sudo so it executes as root when invoked by
+    upsmon (which drops privileges to the nut user). Add
+    /etc/sudoers.d/pve-ups-panel granting nut NOPASSWD access to the
+    notify hook only, with env_keep for NOTIFYTYPE and UPSNAME. This
+    fixes notifications and event log writes being silently dropped.
+  * pve-ups-notify: add NOTIFYTYPE whitelist (10 valid NUT events) and
+    sanitise UPSNAME to [A-Za-z0-9_@.-] to prevent injection when
+    running as root.
+  * Notify.pm: remove OVERLOAD from %NUT_EVENTS — upsmon does not
+    accept it as a NOTIFYFLAG type, causing a startup warning.
+  * Notify.pm: fix service name nut-client → nut-monitor when restarting
+    upsmon after saving notification settings (nut-client is a package
+    name, not a systemd service; the correct service is nut-monitor).
+  * debian/control: add sudo to Depends.
+  * postinst: create /etc/sudoers.d/pve-ups-panel (0440) and
+    /var/log/pve-ups-panel/ on install.
+  * prerm: remove /etc/sudoers.d/pve-ups-panel on uninstall.
+
+ -- YoMin Su <aaaa1234567891016@gmail.com>  Thu, 29 May 2026 14:00:00 +0800
+
 pve-ups-panel (2.1.4) stable; urgency=low
 
   * Notifications: fix saved targets/enabled/threshold silently discarded
