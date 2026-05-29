@@ -1,3 +1,20 @@
+pve-ups-panel (2.1.4) stable; urgency=low
+
+  * Notifications: fix saved targets/enabled/threshold silently discarded
+    on reload. _loadData used Ext.apply(obj, def, savedValues) where the
+    third argument is only applied when the property is absent — meaning
+    stored values were always overridden by built-in defaults. Replaced
+    with Object.assign({}, def, savedOverrides) so saved state is
+    correctly restored.
+  * Shutdown Rules, Notifications: display Ext.toast('Settings saved.')
+    on successful PUT so users receive immediate visual confirmation
+    instead of a silent data reload.
+  * History: enable auto-refresh via RRDStore startUpdate/stopUpdate
+    (interval 60 s). Charts now update automatically while the tab is
+    active and stop polling when the user navigates away.
+
+ -- YoMin Su <aaaa1234567891016@gmail.com>  Thu, 29 May 2026 08:00:00 +0800
+
 pve-ups-panel (2.1.3) stable; urgency=low
 
   * Convert RRD collector from timer+oneshot to persistent daemon.
