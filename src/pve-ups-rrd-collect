@@ -1,0 +1,58 @@
+#!/usr/bin/perl
+use strict;
+use warnings;
+
+use PVE::INotify;
+use PVE::API2::UPS::RRD;
+
+my $UPS_CONF = '/etc/nut/ups.conf';
+my $INTERVAL = 60;
+
+my $running = 1;
+$SIG{TERM} = sub { $running = 0 };
+$SIG{INT}  = sub { $running = 0 };
+
+sub list_configured_devices {
+    return () unless -f $UPS_CONF;
+    my @devices;
+    open(my $fh, '<', $UPS_CONF) or return ();
+    while (<$fh>) {
+        push @devices, $1 if /^\[([^\]]+)\]/;
+    }
+    close $fh;
+    return @devices;
+}
+
+sub run_upsc {
+    my ($ups_name) = @_;
+    my $result = {};
+    open(my $fh, '-|', '/bin/upsc', $ups_name) or return $result;
+    while (<$fh>) {
+        chomp;
+        $result->{$1} = $2 if /^([^:]+):\s*(.*)$/;
+    }
+    close $fh;
+    return $result;
+}
+
+sub collect_once {
+    my $node    = PVE::INotify::nodename();
+    my @devices = list_configured_devices();
+    return unless @devices;
+
+    for my $ups (@devices) {
+        my $data = run_upsc($ups);
+        eval { PVE::API2::UPS::RRD::update_rrd($node, $ups, $data) };
+        warn "pve-ups-rrd-collect: $ups: $@\n" if $@;
+    }
+}
+
+# Wake at each epoch-aligned minute boundary so data points land on :00 of
+# every minute, matching RRD's expected step interval.
+while ($running) {
+    my $now  = time();
+    my $next = (int($now / $INTERVAL) + 1) * $INTERVAL;
+    sleep($next - $now);          # interrupted early by SIGTERM — that's fine
+
+    collect_once() if $running;
+}

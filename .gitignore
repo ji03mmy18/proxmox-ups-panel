@@ -1,0 +1,11 @@
+# dpkg build artifacts
+*.deb
+*.buildinfo
+*.changes
+
+# debhelper staging directory and intermediate files
+debian/pve-ups-panel/
+debian/debhelper-build-stamp
+debian/files
+debian/*.substvars
+debian/*.debhelper

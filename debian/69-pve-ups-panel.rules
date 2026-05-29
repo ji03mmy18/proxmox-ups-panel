@@ -1,0 +1,30 @@
+# pve-ups-panel: USB UPS vendor catch-all permissions
+#
+# NUT's 62-nut-usbups.rules covers specific known product IDs.
+# These rules complement it by matching ANY device from each vendor,
+# ensuring new or unrecognised models are also accessible by the nut group.
+#
+# Runs after NUT's rules (62-) so MODE/GROUP are set correctly even when
+# the device does not appear in NUT's list.
+
+# CyberPower
+SUBSYSTEM=="usb", ATTR{idVendor}=="0764", MODE="0660", GROUP="nut"
+
+# APC / Schneider Electric
+SUBSYSTEM=="usb", ATTR{idVendor}=="051d", MODE="0660", GROUP="nut"
+
+# Eaton / MGE / Powerware
+SUBSYSTEM=="usb", ATTR{idVendor}=="0463", MODE="0660", GROUP="nut"
+
+# Tripp Lite
+SUBSYSTEM=="usb", ATTR{idVendor}=="09ae", MODE="0660", GROUP="nut"
+
+# Powercom
+SUBSYSTEM=="usb", ATTR{idVendor}=="0592", MODE="0660", GROUP="nut"
+SUBSYSTEM=="usb", ATTR{idVendor}=="0f03", MODE="0660", GROUP="nut"
+
+# Belkin
+SUBSYSTEM=="usb", ATTR{idVendor}=="050d", MODE="0660", GROUP="nut"
+
+# Phoenixtec / Online USV
+SUBSYSTEM=="usb", ATTR{idVendor}=="06da", MODE="0660", GROUP="nut"

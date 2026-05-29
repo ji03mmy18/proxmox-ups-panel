@@ -1,0 +1,41 @@
+#!/bin/bash
+set -e
+
+PVE_NODES_PM="/usr/share/perl5/PVE/API2/Nodes.pm"
+PVE_TPL="/usr/share/pve-manager/index.html.tpl"
+
+case "$1" in
+    remove|upgrade|deconfigure|failed-upgrade)
+        # ── Stop RRD collector service ────────────────────────────────────
+        systemctl stop    pve-ups-panel-rrdcollect.service 2>/dev/null || true
+        systemctl disable pve-ups-panel-rrdcollect.service 2>/dev/null || true
+
+        # ── Restore Nodes.pm ──────────────────────────────────────────────
+        if dpkg-divert --list "$PVE_NODES_PM" | grep -q "pve-ups-panel"; then
+            rm -f "$PVE_NODES_PM"
+            dpkg-divert --remove --rename \
+                --package pve-ups-panel \
+                "$PVE_NODES_PM"
+        fi
+
+        # ── Restore index.html.tpl ────────────────────────────────────────
+        if dpkg-divert --list "$PVE_TPL" | grep -q "pve-ups-panel"; then
+            rm -f "$PVE_TPL"
+            dpkg-divert --remove --rename \
+                --package pve-ups-panel \
+                "$PVE_TPL"
+        fi
+
+        # ── Reload udev rules (rules file will be removed by dpkg) ───────
+        udevadm control --reload-rules
+        udevadm trigger --subsystem-match=usb --action=add 2>/dev/null || true
+
+        # ── Restart pveproxy ──────────────────────────────────────────────
+        if systemctl is-active --quiet pveproxy 2>/dev/null; then
+            systemctl restart pveproxy
+        fi
+        ;;
+esac
+
+#DEBHELPER#
+exit 0

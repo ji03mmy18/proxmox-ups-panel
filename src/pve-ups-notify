@@ -1,0 +1,101 @@
+#!/usr/bin/perl
+# pve-ups-notify — NUT NOTIFYCMD hook
+# Invoked by upsmon on UPS events. Env vars: NOTIFYTYPE, UPSNAME
+
+use strict;
+use warnings;
+use JSON;
+use POSIX qw(strftime);
+
+my $event    = $ENV{NOTIFYTYPE} // 'UNKNOWN';
+my $ups_name = $ENV{UPSNAME}    // 'ups';
+my $ts       = strftime('%Y-%m-%dT%H:%M:%S', localtime);
+
+my $log_dir  = '/var/log/pve-ups-panel';
+my $log_file = "$log_dir/events.log";
+my $cfg_file = '/etc/pve-ups-panel/notify-rules.json';
+
+# ── Log event to file ────────────────────────────────────────────────────
+mkdir $log_dir, 0755 unless -d $log_dir;
+if (open my $fh, '>>', $log_file) {
+    print $fh "$ts $ups_name $event\n";
+    close $fh;
+}
+
+# ── Load rules ───────────────────────────────────────────────────────────
+my $rules = [];
+if (-f $cfg_file) {
+    if (open my $fh, '<', $cfg_file) {
+        local $/;
+        my $content = <$fh>;
+        close $fh;
+        $rules = eval { decode_json($content) } // [];
+    }
+}
+
+my ($rule) = grep {
+    ($_->{event} // '') eq $event && ($_->{enabled} // 0)
+} @$rules;
+
+exit 0 unless $rule;
+
+my @targets = @{$rule->{targets} || []};
+exit 0 unless @targets;
+
+# ── Send via PVE notification system ─────────────────────────────────────
+my %event_desc = (
+    ONBATT    => 'UPS switched to battery power.',
+    ONLINE    => 'UPS is back on line power.',
+    LOWBATT   => 'UPS battery is critically low.',
+    FSD       => 'UPS is performing a forced shutdown.',
+    COMMBAD   => 'Communication with UPS lost.',
+    REPLBATT  => 'UPS battery needs replacement.',
+    OVERLOAD  => 'UPS is overloaded.',
+    VOLT_ANOM => 'UPS input voltage anomaly detected.',
+);
+
+my $description = $event_desc{$event} // "UPS event: $event";
+my $severity    = $rule->{severity} // 'warning';
+
+eval {
+    require PVE::INotify;
+    require Proxmox::RS::Notify;
+
+    my $hostname = PVE::INotify::nodename();
+
+    # Read PVE notification config directly from files (no cluster daemon needed)
+    my $cfg      = '';
+    my $priv_cfg = '';
+    if (open my $f, '<', '/etc/pve/notifications.cfg') {
+        local $/; $cfg = <$f>; close $f;
+    }
+    if (open my $f, '<', '/etc/pve/priv/notifications.cfg') {
+        local $/; $priv_cfg = <$f>; close $f;
+    }
+
+    for my $target (@targets) {
+        eval {
+            my $nc = Proxmox::RS::Notify->parse_config($cfg, $priv_cfg);
+
+            # Remove all existing matchers so we only notify the chosen target
+            for my $m (@{$nc->get_matchers()}) {
+                $nc->delete_matcher($m->{name});
+            }
+            $nc->add_matcher("ups-notify-$$", [$target]);
+
+            $nc->send($severity, 'ups-event', {
+                hostname    => $hostname,
+                ups         => $ups_name,
+                event       => $event,
+                time        => $ts,
+                description => $description,
+            }, { type => 'ups-event' });
+        };
+        if ($@) {
+            warn "Failed to send notification to '$target': $@\n";
+        }
+    }
+};
+warn "Notification error: $@\n" if $@;
+
+exit 0;

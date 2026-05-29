@@ -1,0 +1,82 @@
+pve-ups-panel (2.1.3) stable; urgency=low
+
+  * Convert RRD collector from timer+oneshot to persistent daemon.
+    Eliminates ~1440 journal entries/day caused by repeated start/stop
+    cycles. pve-ups-rrd-collect now runs as Type=simple with an internal
+    epoch-aligned sleep loop (wakes at each wall-clock :00 second),
+    matching RRD step boundaries without drift. SIGTERM exits cleanly.
+    pve-ups-panel-rrdcollect.timer removed; service depends on
+    multi-user.target instead of timers.target.
+
+ -- PVE UPS Panel Maintainer <admin@localhost>  Thu, 29 May 2026 04:00:00 +0800
+
+pve-ups-panel (2.1.2) stable; urgency=low
+
+  * pve-ups-panel.js: fix UPS tab not restored after page refresh.
+    Switch injection point from PVE.node.Config.initComponent to
+    PVE.panel.Config.insertNodes. PVE's state restoration (findChild +
+    menu.setSelection) runs immediately after insertNodes inside
+    initComponent; by injecting at insertNodes time our tab is present
+    when PVE looks it up, so no second setSelection is required.
+
+ -- PVE UPS Panel Maintainer <admin@localhost>  Thu, 29 May 2026 03:00:00 +0800
+
+pve-ups-panel (2.1.1) stable; urgency=low
+
+  * postinst/prerm: use --action=add for udevadm trigger so MODE/GROUP
+    rules are applied to already-connected USB UPS devices. --action=change
+    (the default) does not reliably update /dev node ownership on all kernels.
+
+ -- PVE UPS Panel Maintainer <admin@localhost>  Thu, 29 May 2026 02:00:00 +0800
+
+pve-ups-panel (2.1.0) stable; urgency=low
+
+  * Add 69-pve-ups-panel.rules: vendor-level USB UPS udev catch-all rules
+    for CyberPower, APC, Eaton, Tripp Lite, Powercom, Belkin, Phoenixtec.
+    Complements NUT's product-specific rules (62-nut-usbups.rules) to cover
+    new or unrecognised models. MODE=0660 GROUP=nut.
+  * postinst/prerm: reload udev rules and re-trigger USB subsystem on
+    install and removal.
+
+ -- PVE UPS Panel Maintainer <admin@localhost>  Thu, 29 May 2026 01:00:00 +0800
+
+pve-ups-panel (2.0.0) stable; urgency=low
+
+  * Complete rewrite: multi-tab architecture replacing single-panel design.
+  * Phase 1: PVE.ups.View card layout, EmptyState, 7-tab scaffold,
+    DeviceSelector toolbar, monkey-patch injection into PVE.node.Config.
+  * Phase 2-3: Overview page with SetupWizard (3-step), live dashboard
+    connected to GET /nodes/{node}/ups API.
+  * Phase 4: Backend PVE::API2::UPS multi-module (Config, Scan, RRD,
+    Battery, Shutdown, Notify, Log), NUT ups.conf CRUD, USB scan.
+  * Phase 5: Device Management page — DeviceEditWindow, service status,
+    start/stop/restart controls.
+  * Phase 6: History page — 4 proxmoxRRDChart charts, RRD.pm backend
+    with rrdtool create/update, pve-ups-panel-rrdcollect timer.
+  * Phase 7: Battery Health page — health card, quick/full test with
+    confirm dialogs, polling, test history grid.
+  * Phase 8: Shutdown Rules page — global/recovery hbox, VM/CT grid,
+    ShutdownRuleEditWindow, Shutdown.pm with qm/pct integration.
+  * Phase 9: Notifications page — PVE endpoint list, 8-event rules grid,
+    NotifyEditWindow (TagField), Notify.pm, pve-ups-notify NUT hook,
+    Handlebars email templates.
+  * Phase 10: Logs page — event log grid (newest first), Clear button
+    (Sys.Modify), Log.pm backend.
+  * Phase 11: i18n complete — 212 strings translated into 31 languages
+    (zh_TW, zh_CN, de, fr, es, it, pt_BR, ru, ja, ko, pl, nl, tr, cs,
+    sv, da, nb, nn, hu, hr, sl, bg, ukr, ca, eu, fa, gl, he, ar, ka).
+  * Packaging: dpkg-divert for Nodes.pm and index.html.tpl, systemd
+    timer for RRD collection, full prerm/postinst lifecycle.
+
+ -- PVE UPS Panel Maintainer <admin@localhost>  Thu, 29 May 2026 00:00:00 +0800
+
+pve-ups-panel (1.0.0) stable; urgency=low
+
+  * Initial release.
+  * UPS monitoring panel for Proxmox VE node pages.
+  * Backend: PVE::API2::UPS — GET /nodes/{node}/ups via upsc.
+  * Frontend: ExtJS panel with dashboard gauges and detail cards.
+  * Settings wizard: standalone / netclient / netserver modes.
+  * USB UPS auto-detection via lsusb (CyberPower, APC).
+
+ -- PVE UPS Panel Maintainer <admin@localhost>  Mon, 26 May 2026 21:00:00 +0800

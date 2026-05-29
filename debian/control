@@ -1,0 +1,27 @@
+Source: pve-ups-panel
+Section: admin
+Priority: optional
+Maintainer: PVE UPS Panel Maintainer <admin@localhost>
+Build-Depends: debhelper (>= 12)
+Standards-Version: 4.5.1
+Rules-Requires-Root: no
+
+Package: pve-ups-panel
+Architecture: all
+Depends: pve-manager (>= 7.0), nut-client, python3, libjson-perl, librrds-perl
+Recommends: nut-server
+Description: UPS management panel for Proxmox VE
+ Adds a full UPS management interface to the Proxmox VE node page via
+ NUT (Network UPS Tools). Provides seven sub-tabs covering all aspects
+ of UPS monitoring and management.
+ .
+ Features:
+  - Overview: live dashboard with battery charge, load, runtime gauges
+    and full device detail cards; NUT setup wizard
+  - Device Management: add/edit/delete NUT devices, service control
+  - History: RRD trend charts for charge, load, voltage, runtime
+  - Battery Health: health assessment, quick/full battery test
+  - Shutdown Rules: per-VM/CT ordered shutdown, recovery strategy
+  - Notifications: PVE notification target routing per UPS event
+  - Logs: UPS event log viewer with clear function
+  - i18n: 31 languages (zh_TW, zh_CN, de, fr, es, it, ja, ko, and more)

@@ -1,0 +1,169 @@
+#!/bin/bash
+set -e
+
+PVE_NODES_PM="/usr/share/perl5/PVE/API2/Nodes.pm"
+PVE_TPL="/usr/share/pve-manager/index.html.tpl"
+
+case "$1" in
+    configure)
+        # ── 1. dpkg-divert Nodes.pm ───────────────────────────────────────
+        if ! dpkg-divert --list "$PVE_NODES_PM" | grep -q "$PVE_NODES_PM"; then
+            dpkg-divert --add --rename \
+                --divert "${PVE_NODES_PM}.dpkg-orig" \
+                --package pve-ups-panel \
+                "$PVE_NODES_PM"
+            cp "${PVE_NODES_PM}.dpkg-orig" "$PVE_NODES_PM"
+        fi
+
+        # ── 2. Patch Nodes.pm ─────────────────────────────────────────────
+        # Always restore from original before patching to avoid double-patch
+        if [ -f "${PVE_NODES_PM}.dpkg-orig" ]; then
+            cp "${PVE_NODES_PM}.dpkg-orig" "$PVE_NODES_PM"
+        fi
+
+        python3 - "$PVE_NODES_PM" <<'PYEOF'
+import sys, re
+
+with open(sys.argv[1], 'r') as f:
+    content = f.read()
+
+# Nodes.pm has two packages:
+#   PVE::API2::Nodes::Nodeinfo  (lines 1 .. nodeinfo_end)
+#   PVE::API2::Nodes            (nodeinfo_end .. end)
+#
+# UPS must be registered in Nodeinfo (handles /nodes/{node}/...),
+# NOT in the top-level Nodes class (which already has a {node} regex match).
+
+nodeinfo_boundary = content.index('\npackage PVE::API2::Nodes;')
+nodeinfo_section  = content[:nodeinfo_boundary]
+
+# ── Insert 'use PVE::API2::UPS;' after the last 'use PVE::API2::...' in Nodeinfo
+use_line = "use PVE::API2::UPS;\n"
+if use_line.strip() not in nodeinfo_section:
+    uses = [m.end() for m in re.finditer(r'use PVE::API2::\w[^;]*;\n', nodeinfo_section)]
+    if uses:
+        ins = uses[-1]
+        content = content[:ins] + use_line + content[ins:]
+        # keep boundary up to date
+        nodeinfo_boundary += len(use_line)
+        nodeinfo_section   = content[:nodeinfo_boundary]
+
+# ── Insert subclass registration inside Nodeinfo, after path 'sdn' block
+ups_reg = (
+    "\n__PACKAGE__->register_method({\n"
+    "    subclass => \"PVE::API2::UPS\",\n"
+    "    path => 'ups',\n"
+    "});\n"
+)
+if 'subclass => "PVE::API2::UPS"' not in nodeinfo_section:
+    # Anchor: end of the 'sdn' subclass block (last fixed-path subclass in Nodeinfo)
+    anchor = "path => 'sdn',"
+    anchor_pos = nodeinfo_section.rfind(anchor)
+    if anchor_pos == -1:
+        # Fallback: just before the 'index' method in Nodeinfo
+        anchor_pos = nodeinfo_section.rfind("    name => 'index',")
+    if anchor_pos != -1:
+        block_end = nodeinfo_section.find('});\n', anchor_pos)
+        if block_end != -1:
+            ins = block_end + len('});\n')
+            content = content[:ins] + ups_reg + content[ins:]
+
+with open(sys.argv[1], 'w') as f:
+    f.write(content)
+PYEOF
+
+        # ── 3. dpkg-divert index.html.tpl ─────────────────────────────────
+        if ! dpkg-divert --list "$PVE_TPL" | grep -q "$PVE_TPL"; then
+            dpkg-divert --add --rename \
+                --divert "${PVE_TPL}.dpkg-orig" \
+                --package pve-ups-panel \
+                "$PVE_TPL"
+            cp "${PVE_TPL}.dpkg-orig" "$PVE_TPL"
+        fi
+
+        # ── 4. Patch index.html.tpl ───────────────────────────────────────
+        # Restore original before patching to avoid double-patch
+        if [ -f "${PVE_TPL}.dpkg-orig" ]; then
+            cp "${PVE_TPL}.dpkg-orig" "$PVE_TPL"
+        fi
+
+        UPS_TS=$(date +%s)
+        SCRIPT_TAG="    <script src=\"/pve2/js/pve-ups-panel.js?v=${UPS_TS}\"></script>"
+        python3 - "$PVE_TPL" "$SCRIPT_TAG" <<'PYEOF'
+import sys
+
+path, tag = sys.argv[1], sys.argv[2]
+with open(path) as f:
+    lines = f.readlines()
+
+if any('pve-ups-panel.js' in l for l in lines):
+    sys.exit(0)  # already patched
+
+idx = -1
+for i, line in enumerate(lines):
+    if 'pvemanagerlib.js' in line and '<script' in line:
+        idx = i
+if idx == -1:
+    for i, line in enumerate(lines):
+        if '</head>' in line:
+            idx = i - 1
+            break
+if idx == -1:
+    print("ERROR: no insertion point found", file=sys.stderr)
+    sys.exit(1)
+
+lines.insert(idx + 1, tag + '\n')
+with open(path, 'w') as f:
+    f.writelines(lines)
+PYEOF
+
+        # ── 4b. Patch index.html.tpl: insert UPS lang file loader ─────────
+        python3 - "$PVE_TPL" <<'PYEOF'
+import sys
+
+path = sys.argv[1]
+with open(path) as f:
+    lines = f.readlines()
+
+if any('pve-ups-lang' in l for l in lines):
+    sys.exit(0)  # already patched
+
+lang_tag = "    <script type='text/javascript' src='/pve2/locale/pve-ups-lang-[% lang %].js'></script>\n"
+
+idx = -1
+for i, line in enumerate(lines):
+    if 'pve-lang-' in line and 'locale' in line and '<script' in line:
+        idx = i
+        break
+if idx == -1:
+    print("ERROR: pve-lang script line not found", file=sys.stderr)
+    sys.exit(1)
+
+lines.insert(idx + 1, lang_tag)
+with open(path, 'w') as f:
+    f.writelines(lines)
+PYEOF
+
+        # ── 5. Enable RRD collector service ───────────────────────────────
+        chmod +x /usr/lib/pve-ups-panel/pve-ups-rrd-collect
+        systemctl daemon-reload
+        systemctl enable pve-ups-panel-rrdcollect.service
+        systemctl start  pve-ups-panel-rrdcollect.service
+
+        # ── 6. Reload udev rules for USB UPS devices ──────────────────────
+        # --action=add re-simulates device insertion so MODE/GROUP are applied
+        # to already-connected devices (--action=change may not update /dev node)
+        udevadm control --reload-rules
+        udevadm trigger --subsystem-match=usb --action=add 2>/dev/null || true
+
+        # ── 7. Restart pveproxy ───────────────────────────────────────────
+        if systemctl is-active --quiet pveproxy 2>/dev/null; then
+            systemctl restart pveproxy
+        else
+            systemctl start pveproxy 2>/dev/null || true
+        fi
+        ;;
+esac
+
+#DEBHELPER#
+exit 0

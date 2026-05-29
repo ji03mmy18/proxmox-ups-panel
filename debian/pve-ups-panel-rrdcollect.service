@@ -1,0 +1,16 @@
+[Unit]
+Description=PVE UPS Panel RRD data collector
+After=nut-server.service
+Wants=nut-server.service
+
+[Service]
+Type=simple
+ExecStart=/usr/lib/pve-ups-panel/pve-ups-rrd-collect
+Restart=on-failure
+RestartSec=30
+StandardOutput=null
+StandardError=journal
+SyslogIdentifier=pve-ups-rrd-collect
+
+[Install]
+WantedBy=multi-user.target

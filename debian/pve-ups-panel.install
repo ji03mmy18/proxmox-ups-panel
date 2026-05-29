@@ -1,0 +1,17 @@
+src/UPS.pm usr/share/perl5/PVE/API2
+src/UPS/Config.pm usr/share/perl5/PVE/API2/UPS
+src/UPS/Scan.pm usr/share/perl5/PVE/API2/UPS
+src/UPS/RRD.pm usr/share/perl5/PVE/API2/UPS
+src/UPS/Battery.pm usr/share/perl5/PVE/API2/UPS
+src/UPS/Shutdown.pm usr/share/perl5/PVE/API2/UPS
+src/UPS/Notify.pm usr/share/perl5/PVE/API2/UPS
+src/UPS/Log.pm usr/share/perl5/PVE/API2/UPS
+src/pve-ups-panel.js usr/share/pve-manager/js
+src/locale/pve-ups-lang-*.js usr/share/pve-i18n
+src/pve-ups-rrd-collect usr/lib/pve-ups-panel
+src/pve-ups-notify usr/lib/pve-ups-panel
+src/templates/ups-event-subject.txt.hbs usr/share/pve-manager/templates/default
+src/templates/ups-event-body.txt.hbs usr/share/pve-manager/templates/default
+src/templates/ups-event-body.html.hbs usr/share/pve-manager/templates/default
+debian/pve-ups-panel-rrdcollect.service lib/systemd/system
+debian/69-pve-ups-panel.rules lib/udev/rules.d
