@@ -14,10 +14,38 @@ use POSIX qw(strftime);
 
 use base qw(PVE::RESTHandler);
 
-my $TESTS_FILE = '/etc/pve-ups-panel/battery-tests.json';
-my $TESTS_DIR  = '/etc/pve-ups-panel';
+my $TESTS_FILE  = '/etc/pve-ups-panel/battery-tests.json';
+my $TESTS_DIR   = '/etc/pve-ups-panel';
+my $UPS_CONF    = '/etc/nut/ups.conf';
+my $UPSMON_CONF = '/etc/nut/upsmon.conf';
 
 # ── 輔助函式 ────────────────────────────────────────────────────────────────
+
+# 將純裝置名稱解析成 upsc/upscmd 查詢位址
+#   本機裝置 → name（upsc 預設查 localhost）
+#   遠端裝置 → name@host 或 name@host:port
+sub _resolve_upsc_target {
+    my ($name) = @_;
+    if (-f $UPS_CONF) {
+        open my $fh, '<', $UPS_CONF or goto REMOTE;
+        while (<$fh>) { return $name if /^\[$name\]/; }
+        close $fh;
+    }
+    REMOTE:
+    if (-f $UPSMON_CONF) {
+        open my $fh, '<', $UPSMON_CONF or return $name;
+        while (<$fh>) {
+            if (/^MONITOR\s+(\S+)\s/) {
+                my $target = $1;
+                next if $target =~ /\@localhost(?::\d+)?$/;
+                my ($dname) = $target =~ /^([^@]+)/;
+                return $target if $dname eq $name;
+            }
+        }
+        close $fh;
+    }
+    return $name;
+}
 
 sub _run_upsc {
     my ($ups) = @_;
@@ -194,9 +222,10 @@ __PACKAGE__->register_method({
     code => sub {
         my ($param) = @_;
         my $ups = $param->{ups} // 'ups';
-        $ups =~ s/[^a-zA-Z0-9_@.-]//g;
+        $ups =~ s/[^a-zA-Z0-9_.-]//g;
+        my $upsc_target = _resolve_upsc_target($ups);
 
-        my $upsc_data   = _run_upsc($ups);
+        my $upsc_data   = _run_upsc($upsc_target);
         my $test_result = $upsc_data->{'ups.test.result'} // 'No test initiated';
 
         my $all   = _read_all_tests();
@@ -262,7 +291,8 @@ __PACKAGE__->register_method({
         my ($param) = @_;
         my $ups  = $param->{ups}  // 'ups';
         my $type = $param->{type} // 'quick';
-        $ups =~ s/[^a-zA-Z0-9_@.-]//g;
+        $ups =~ s/[^a-zA-Z0-9_.-]//g;
+        my $upsc_target = _resolve_upsc_target($ups);
 
         my ($user, $pass) = _find_nut_admin();
         die "No NUT user with instcmds permission found in /etc/nut/upsd.users.\n" .
@@ -271,7 +301,7 @@ __PACKAGE__->register_method({
 
         my $cmd = ($type eq 'full') ? 'test.battery.start' : 'test.battery.start.quick';
 
-        open(my $fh, '-|', 'upscmd', '-u', $user, '-p', $pass, $ups, $cmd)
+        open(my $fh, '-|', 'upscmd', '-u', $user, '-p', $pass, $upsc_target, $cmd)
             or die "Cannot run upscmd: $!\n";
         my $out = do { local $/; <$fh> };
         close $fh;
@@ -280,7 +310,7 @@ __PACKAGE__->register_method({
             "Check NUT permissions and UPS support.\nOutput: $out\n"
             unless $ok;
 
-        my $upsc_data = _run_upsc($ups);
+        my $upsc_data = _run_upsc($upsc_target);
         my $charge    = $upsc_data->{'battery.charge'};
 
         my $all   = _read_all_tests();

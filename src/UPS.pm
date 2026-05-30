@@ -32,35 +32,41 @@ __PACKAGE__->register_method({ subclass => 'PVE::API2::UPS::Log',      path => '
 
 # ── 輔助函式 ────────────────────────────────────────────────────────────────
 
-# 回傳所有可查詢的 UPS 位址：
-#   本機裝置 → "name"（upsc 預設查 localhost）
-#   遠端裝置 → "name@host:port"
-sub _list_configured_devices {
-    my @devices;
+# 回傳 { 純裝置名稱 => upsc 查詢位址 } 的對應表：
+#   本機裝置 → name => name（upsc 預設查 localhost）
+#   遠端裝置 → name => "name@host" 或 "name@host:port"（非 3493 時含 port）
+sub _device_target_map {
+    my %map;
 
     # 本機裝置：ups.conf section headers
     if (-f $UPS_CONF) {
         open(my $fh, '<', $UPS_CONF) or goto REMOTE;
-        while (<$fh>) { push @devices, $1 if /^\[([^\]]+)\]/; }
+        while (<$fh>) { $map{$1} = $1 if /^\[([^\]]+)\]/; }
         close $fh;
     }
     REMOTE:
 
     # 遠端裝置：upsmon.conf 非 localhost MONITOR 行
     if (-f $UPSMON_CONF) {
-        open(my $fh, '<', $UPSMON_CONF) or return @devices;
+        open(my $fh, '<', $UPSMON_CONF) or return %map;
         while (<$fh>) {
             if (/^MONITOR\s+(\S+)\s/) {
-                my $target = $1;
-                # 非 localhost 的才算遠端
-                next if $target =~ /\@localhost(?::\d+)?$/;
-                push @devices, $target;
+                my $full_target = $1;
+                next if $full_target =~ /\@localhost(?::\d+)?$/;
+                my ($name) = $full_target =~ /^([^@]+)/;
+                $map{$name} = $full_target unless exists $map{$name};
             }
         }
         close $fh;
     }
 
-    return @devices;
+    return %map;
+}
+
+# 回傳所有已設定裝置的純名稱清單（供 _no_devices 判斷用）
+sub _list_configured_devices {
+    my %map = _device_target_map();
+    return sort keys %map;
 }
 
 # 執行 upsc 並回傳 key-value hash
@@ -101,10 +107,10 @@ __PACKAGE__->register_method({
             node => get_standard_option('pve-node'),
             ups  => {
                 type        => 'string',
-                pattern     => '[a-zA-Z0-9_@.:-]+',
+                pattern     => '[a-zA-Z0-9_.-]+',
                 default     => 'ups',
                 optional    => 1,
-                description => 'NUT UPS 裝置名稱（遠端：name@host:port）',
+                description => 'UPS 裝置名稱（Device Management 中設定的名稱）',
             },
         },
     },
@@ -116,22 +122,27 @@ __PACKAGE__->register_method({
     code => sub {
         my ($param) = @_;
 
-        my @devices = _list_configured_devices();
-        return { _no_devices => 1 } unless @devices;
+        my %target_map = _device_target_map();
+        my @names = sort keys %target_map;
+        return { _no_devices => 1 } unless @names;
 
-        my $ups_name = $param->{ups} // $devices[0];
-        $ups_name =~ s/[^a-zA-Z0-9_@.:-]//g;
-        $ups_name ||= $devices[0];
+        # 接受純裝置名稱；若不在清單中則退回第一台
+        my $requested = $param->{ups} // $names[0];
+        $requested =~ s/[^a-zA-Z0-9_.-]//g;
+        $requested = $names[0] unless $target_map{$requested};
 
-        my $result = _run_upsc($ups_name);
-        $result->{_ups_name}  = $ups_name;
-        $result->{_available} = \@devices;
+        # 內部解析成 upsc 查詢位址（本機用 name，遠端用 name@host[:port]）
+        my $upsc_target = $target_map{$requested};
+
+        my $result = _run_upsc($upsc_target);
+        $result->{_ups_name}  = $requested;   # 回傳純名稱，前端用此識別裝置
+        $result->{_available} = \@names;       # 純名稱清單，前端直接顯示
         $result->{_services}  = {
             'nut-server'  => _service_status('nut-server'),
             'nut-monitor' => _service_status('nut-monitor'),
         };
 
-        PVE::API2::UPS::RRD::update_rrd($param->{node}, $ups_name, $result);
+        PVE::API2::UPS::RRD::update_rrd($param->{node}, $requested, $result);
 
         return $result;
     },

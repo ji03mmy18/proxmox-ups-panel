@@ -1,3 +1,22 @@
+pve-ups-panel (2.2.7) stable; urgency=medium
+
+  * Architecture: device names are now plain names throughout the UI.
+    The backend resolves a plain name to its upsc target internally, so
+    the frontend never needs to know about name@host:port details.
+  * UPS.pm: replace _list_configured_devices() with _device_target_map()
+    (returns { name => upsc_target } hash). GET /ups now accepts a plain
+    device name, resolves to the correct upsc target (local: name, remote:
+    name@host[:port]), and returns plain names in _ups_name and _available.
+    RRD files are keyed by plain name, not the stripped upsc target.
+  * UPS/Battery.pm: add _resolve_upsc_target() helper (reads ups.conf and
+    upsmon.conf). GET and POST /battery now sanitise the ups param to a
+    plain name then resolve before passing to upsc / upscmd.
+  * pve-ups-panel.js: revert v2.2.6 name@host reconstruction in
+    _loadDevices. DeviceSelector consistently shows and sends plain device
+    names; all three tabs (Overview, History, Battery Health) stay in sync.
+
+ -- YoMin Su <aaaa1234567891016@gmail.com>  Sun, 01 Jun 2026 03:00:00 +0800
+
 pve-ups-panel (2.2.6) stable; urgency=medium
 
   * pve-ups-panel.js: fix remote device name in DeviceSelector. Config.pm
