@@ -1,3 +1,13 @@
+pve-ups-panel (2.2.3) stable; urgency=low
+
+  * pve-ups-panel.js: fix Server Settings button never visible. Removed
+    hidden: true and '->' fill spacer from mode bar definition; removed
+    settingsBtn.setVisible() call from _applyModeUI so the button is
+    always present regardless of current mode. Moved inline description
+    text to tooltip properties on Disabled/Enabled toggle buttons.
+
+ -- YoMin Su <aaaa1234567891016@gmail.com>  Sat, 31 May 2026 20:00:00 +0800
+
 pve-ups-panel (2.2.2) stable; urgency=medium
 
   * Config.pm: separate local and remote NUT accounts. upsmon_local

@@ -1899,6 +1899,7 @@ Ext.define('PVE.ups.DevicePanel', {
                     xtype: 'button',
                     itemId: 'modeDisabledBtn',
                     text: gettext('Disabled'),
+                    tooltip: gettext('This machine monitors its own UPS locally, no network sharing'),
                     enableToggle: true,
                     pressed: true,
                     allowDepress: false,
@@ -1913,6 +1914,7 @@ Ext.define('PVE.ups.DevicePanel', {
                     xtype: 'button',
                     itemId: 'modeEnabledBtn',
                     text: gettext('Enabled'),
+                    tooltip: gettext('Enabled: other computers can connect to this UPS over the network'),
                     enableToggle: true,
                     allowDepress: false,
                     toggleGroup: 'upsModeToggle',
@@ -1924,18 +1926,10 @@ Ext.define('PVE.ups.DevicePanel', {
                 },
                 '-',
                 {
-                    xtype: 'tbtext',
-                    html: '<span style="color:#888;font-size:11px;">' +
-                          gettext('Enabled: other computers can connect to this UPS over the network') +
-                          '</span>',
-                },
-                '->',
-                {
                     xtype: 'button',
                     itemId: 'serverSettingsBtn',
                     text: gettext('Server Settings'),
                     iconCls: 'fa fa-cog',
-                    hidden: true,
                     handler: function () {
                         Ext.create('PVE.ups.ServerSettingsWindow', {
                             nodename: me.nodename,
@@ -2102,10 +2096,9 @@ Ext.define('PVE.ups.DevicePanel', {
     _applyModeUI: function (mode) {
         var me = this;
         me._mode = mode;
-        var disBtn      = me.down('#modeDisabledBtn');
-        var enBtn       = me.down('#modeEnabledBtn');
-        var lbl         = me.down('#modeLabel');
-        var settingsBtn = me.down('#serverSettingsBtn');
+        var disBtn = me.down('#modeDisabledBtn');
+        var enBtn  = me.down('#modeEnabledBtn');
+        var lbl    = me.down('#modeLabel');
         if (disBtn && enBtn) {
             disBtn.toggle(mode === 'standalone', true);
             enBtn.toggle(mode === 'netserver', true);
@@ -2115,9 +2108,6 @@ Ext.define('PVE.ups.DevicePanel', {
                 ? '<span style="color:#4caf50;font-weight:600;">' + gettext('Enabled') + '</span>'
                 : '<span style="color:#888;">' + gettext('Disabled') + '</span>';
             lbl.update(gettext('Network sharing:') + ' ' + stateHtml + ' &nbsp;');
-        }
-        if (settingsBtn) {
-            settingsBtn.setVisible(mode === 'netserver');
         }
     },
 
