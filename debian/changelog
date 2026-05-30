@@ -1,3 +1,15 @@
+pve-ups-panel (2.2.5) stable; urgency=low
+
+  * Config.pm: add GET /ups/config/version endpoint. Runs dpkg-query to
+    return the installed package version; requires Sys.Audit permission,
+    no write access needed.
+  * pve-ups-panel.js: DevicePanel mode bar shows installed package version
+    (e.g. "pve-ups-panel v2.2.5") as right-aligned grey text. Version is
+    fetched once on first tab activate via GET /ups/config/version and
+    cached in _versionLoaded to avoid repeated requests.
+
+ -- YoMin Su <aaaa1234567891016@gmail.com>  Sat, 31 May 2026 23:00:00 +0800
+
 pve-ups-panel (2.2.4) stable; urgency=low
 
   * Config.pm: fix NOTIFYCMD disappearing from upsmon.conf. Previously

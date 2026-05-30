@@ -1936,6 +1936,13 @@ Ext.define('PVE.ups.DevicePanel', {
                         }).show();
                     },
                 },
+                '->',
+                {
+                    xtype: 'tbtext',
+                    itemId: 'pkgVersionLabel',
+                    text: '',
+                    style: 'color:#aaa; font-size:11px;',
+                },
             ],
         };
 
@@ -2073,11 +2080,29 @@ Ext.define('PVE.ups.DevicePanel', {
                 activate: function () {
                     me._loadMode();
                     me._loadDevices();
+                    me._loadVersion();
                 },
             },
         });
 
         me.callParent();
+    },
+
+    _loadVersion: function () {
+        var me = this;
+        if (!me.nodename || me._versionLoaded) return;
+        Proxmox.Utils.API2Request({
+            url: '/nodes/' + encodeURIComponent(me.nodename) + '/ups/config/version',
+            method: 'GET',
+            success: function (response) {
+                var ver = ((response.result || {}).data || {}).version || '';
+                if (ver) {
+                    var lbl = me.down('#pkgVersionLabel');
+                    if (lbl) lbl.setText('pve-ups-panel v' + ver);
+                    me._versionLoaded = true;
+                }
+            },
+        });
     },
 
     _loadMode: function () {

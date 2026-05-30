@@ -758,4 +758,31 @@ __PACKAGE__->register_method({
     },
 });
 
+# ── GET /ups/config/version ───────────────────────────────────────────────
+__PACKAGE__->register_method({
+    name        => 'get_version',
+    path        => 'version',
+    method      => 'GET',
+    description => '回傳已安裝的 pve-ups-panel 套件版本。',
+    protected   => 0,
+    proxyto     => 'node',
+    permissions => { check => ['perm', '/nodes/{node}', ['Sys.Audit']] },
+    parameters  => {
+        additionalProperties => 0,
+        properties => { node => get_standard_option('pve-node') },
+    },
+    returns => {
+        type => 'object',
+        properties => { version => { type => 'string' } },
+    },
+    code => sub {
+        my $version = '';
+        eval {
+            $version = `dpkg-query -W -f='\${Version}' pve-ups-panel 2>/dev/null`;
+            chomp $version;
+        };
+        return { version => $version || 'unknown' };
+    },
+});
+
 1;
