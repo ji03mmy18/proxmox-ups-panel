@@ -1,3 +1,17 @@
+pve-ups-panel (2.1.6) stable; urgency=medium
+
+  * Config.pm: preserve NOTIFYCMD/NOTIFYFLAG lines when wizard rewrites
+    upsmon.conf. Add _extract_notify_lines() to read existing notification
+    settings before overwriting and append them back, preventing the
+    wizard from silently dropping notification configuration.
+  * Config.pm: write comment-only ups.conf in netclient path to clear
+    any stale standalone device entries left from a previous mode.
+  * pve-ups-panel.js: replace connection test Ext.Msg.alert() dialogs
+    with inline status display. Show spinner while request is in flight,
+    green check on success, red X with error message on failure.
+
+ -- YoMin Su <aaaa1234567891016@gmail.com>  Fri, 30 May 2026 10:00:00 +0800
+
 pve-ups-panel (2.1.5) stable; urgency=high
 
   * pve-ups-notify: run via sudo so it executes as root when invoked by
