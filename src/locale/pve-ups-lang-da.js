@@ -241,5 +241,15 @@ Object.assign(__proxmox_i18n_msgcat__, {
     "1617678576": ["UPS tilsluttet via USB eller serielt kabel til denne maskine"],
     "1746936716": ["UPS med SNMP-administrationskort, tilgængeligt via netværket"],
     "925696748": ["Leverandør-ID"],
-    "1022348107": ["Ja — del UPS over netværket"]
+    "1022348107": ["Ja — del UPS over netværket"],
+    "1892453679": ["Kun godkendelse"],
+    "853211134": ["Godkendelse + fortrolighed"],
+    "355684032": ["Godkendelsesadgangskode"],
+    "140263213": ["Godkendelsesprotokol"],
+    "90463781": ["min. 8 tegn"],
+    "451852295": ["Ingen godkendelse, ingen fortrolighed"],
+    "360776269": ["Fortrolighedsadgangskode"],
+    "2104512456": ["Fortrolighedsprotokol"],
+    "1180037097": ["Sikkerhedsniveau"],
+    "2078653050": ["Sikkerhedsnavn"]
 });

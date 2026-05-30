@@ -241,5 +241,15 @@ Object.assign(__proxmox_i18n_msgcat__, {
     "1617678576": ["UPS USB- vagy soros kábellel csatlakozik ehhez a géphez"],
     "1746936716": ["SNMP-kezelőkártyás UPS, hálózaton keresztül elérhető"],
     "925696748": ["Gyártó azonosítója"],
-    "1022348107": ["Igen — UPS megosztása a hálózaton"]
+    "1022348107": ["Igen — UPS megosztása a hálózaton"],
+    "1892453679": ["Csak hitelesítés"],
+    "853211134": ["Hitelesítés + titkosítás"],
+    "355684032": ["Hitelesítési jelszó"],
+    "140263213": ["Hitelesítési protokoll"],
+    "90463781": ["min. 8 karakter"],
+    "451852295": ["Nincs hitelesítés, nincs titkosítás"],
+    "360776269": ["Titkosítási jelszó"],
+    "2104512456": ["Titkosítási protokoll"],
+    "1180037097": ["Biztonsági szint"],
+    "2078653050": ["Biztonsági név"]
 });

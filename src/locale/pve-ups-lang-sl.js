@@ -241,5 +241,15 @@ Object.assign(__proxmox_i18n_msgcat__, {
     "1617678576": ["UPS priključen na napravo prek USB-ja ali serijskega kabla"],
     "1746936716": ["UPS z upravljalno kartico SNMP, dostopen prek omrežja"],
     "925696748": ["ID prodajalca"],
-    "1022348107": ["Da — delite UPS prek omrežja"]
+    "1022348107": ["Da — delite UPS prek omrežja"],
+    "1892453679": ["Samo preverjanje pristnosti"],
+    "853211134": ["Preverjanje + zasebnost"],
+    "355684032": ["Geslo za preverjanje pristnosti"],
+    "140263213": ["Protokol za preverjanje pristnosti"],
+    "90463781": ["vsaj 8 znakov"],
+    "451852295": ["Brez preverjanja in zasebnosti"],
+    "360776269": ["Geslo za zasebnost"],
+    "2104512456": ["Protokol zasebnosti"],
+    "1180037097": ["Varnostna raven"],
+    "2078653050": ["Varnostno ime"]
 });

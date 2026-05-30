@@ -88,6 +88,13 @@ sub _generate_ups_conf {
         $out .= "    community = $d->{community}\n"        if $d->{community};
         $out .= "    snmp_version = $d->{snmp_version}\n"  if $d->{snmp_version};
         $out .= "    mibs = $d->{mibs}\n"                  if $d->{mibs};
+        # SNMPv3 欄位（_parse_ups_conf 以 lc 儲存 key，此處對應寫回 NUT 原始大小寫）
+        $out .= "    secLevel     = $d->{seclevel}\n"     if $d->{seclevel};
+        $out .= "    secName      = $d->{secname}\n"      if $d->{secname};
+        $out .= "    authProtocol = $d->{authprotocol}\n" if $d->{authprotocol};
+        $out .= "    authPassword = $d->{authpassword}\n" if $d->{authpassword};
+        $out .= "    privProtocol = $d->{privprotocol}\n" if $d->{privprotocol};
+        $out .= "    privPassword = $d->{privpassword}\n" if $d->{privpassword};
         $out .= "    desc = \"$d->{desc}\"\n"              if $d->{desc};
         $out .= "\n";
     }
@@ -266,13 +273,20 @@ __PACKAGE__->register_method({
         items => {
             type => 'object',
             properties => {
-                name    => { type => 'string' },
-                type    => { type => 'string', description => 'usb | snmp | remote' },
-                status  => { type => 'string', description => 'connected | disconnected' },
-                driver  => { type => 'string', optional => 1 },
-                port    => { type => 'string', optional => 1 },
-                host    => { type => 'string', optional => 1 },
-                nutport => { type => 'integer', optional => 1 },
+                name         => { type => 'string' },
+                type         => { type => 'string', description => 'usb | snmp | remote' },
+                status       => { type => 'string', description => 'connected | disconnected' },
+                driver       => { type => 'string', optional => 1 },
+                port         => { type => 'string', optional => 1 },
+                host         => { type => 'string', optional => 1 },
+                nutport      => { type => 'integer', optional => 1 },
+                snmp_version => { type => 'string',  optional => 1 },
+                community    => { type => 'string',  optional => 1 },
+                mibs         => { type => 'string',  optional => 1 },
+                seclevel     => { type => 'string',  optional => 1 },
+                secname      => { type => 'string',  optional => 1 },
+                authprotocol => { type => 'string',  optional => 1 },
+                privprotocol => { type => 'string',  optional => 1 },
             },
             additionalProperties => 1,
         },
@@ -349,10 +363,21 @@ __PACKAGE__->register_method({
             productid => { type => 'string',  optional => 1, pattern => '[0-9a-fA-F]{1,4}' },
             # SNMP 欄位
             snmphost     => { type => 'string',  optional => 1, description => 'SNMP 裝置 IP' },
-            community    => { type => 'string',  optional => 1, default => 'public' },
             snmp_version => { type => 'string',  optional => 1, default => 'v2c',
                               enum => ['v1', 'v2c', 'v3'] },
             mibs         => { type => 'string',  optional => 1, default => 'ietf' },
+            # SNMPv1/v2c 欄位
+            community    => { type => 'string',  optional => 1, default => 'public' },
+            # SNMPv3 欄位
+            sec_level    => { type => 'string',  optional => 1,
+                              enum => ['noAuthNoPriv', 'authNoPriv', 'authPriv'] },
+            sec_name     => { type => 'string',  optional => 1 },
+            auth_protocol => { type => 'string', optional => 1,
+                               enum => ['MD5', 'SHA', 'SHA-256', 'SHA-384', 'SHA-512'] },
+            auth_password => { type => 'string', optional => 1, minLength => 8 },
+            priv_protocol => { type => 'string', optional => 1,
+                               enum => ['DES', 'AES', 'AES-192', 'AES-256'] },
+            priv_password => { type => 'string', optional => 1, minLength => 8 },
             # 遠端 NUT Server 欄位
             nuthost  => { type => 'string',  optional => 1 },
             nutport  => { type => 'integer', optional => 1, default => 3493,
@@ -389,10 +414,26 @@ __PACKAGE__->register_method({
                 $snmphost =~ s/[^a-zA-Z0-9._:-]//g;
                 $dev{driver}       = 'snmp-ups';
                 $dev{port}         = $snmphost;
-                $dev{community}    = $param->{community}    // 'public';
                 $dev{snmp_version} = $param->{snmp_version} // 'v2c';
                 $dev{mibs}         = $param->{mibs}         // 'ietf';
                 $dev{desc}         = $param->{desc}         // '';
+                if ($dev{snmp_version} eq 'v3') {
+                    # SNMPv3：帳號 + 安全層級，不使用 community
+                    $dev{seclevel} = $param->{sec_level} // 'noAuthNoPriv';
+                    $dev{secname}  = $param->{sec_name}  // '';
+                    my $lvl = $dev{seclevel};
+                    if ($lvl eq 'authNoPriv' || $lvl eq 'authPriv') {
+                        $dev{authprotocol} = $param->{auth_protocol} // 'SHA';
+                        $dev{authpassword} = $param->{auth_password} // '';
+                    }
+                    if ($lvl eq 'authPriv') {
+                        $dev{privprotocol} = $param->{priv_protocol} // 'AES';
+                        $dev{privpassword} = $param->{priv_password} // '';
+                    }
+                } else {
+                    # SNMPv1/v2c：使用 community string
+                    $dev{community} = $param->{community} // 'public';
+                }
             }
             push @devices, \%dev;
 

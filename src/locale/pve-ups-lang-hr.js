@@ -241,5 +241,15 @@ Object.assign(__proxmox_i18n_msgcat__, {
     "1617678576": ["UPS spojen putem USB-a ili serijskog kabela na ovo računalo"],
     "1746936716": ["UPS s SNMP upravljačkom karticom, dostupan putem mreže"],
     "925696748": ["ID prodavatelja"],
-    "1022348107": ["Da — dijeli UPS putem mreže"]
+    "1022348107": ["Da — dijeli UPS putem mreže"],
+    "1892453679": ["Samo autentikacija"],
+    "853211134": ["Autentikacija + privatnost"],
+    "355684032": ["Lozinka za provjeru autentičnosti"],
+    "140263213": ["Protokol provjere autentičnosti"],
+    "90463781": ["min. 8 znakova"],
+    "451852295": ["Bez autentikacije i privatnosti"],
+    "360776269": ["Lozinka za privatnost"],
+    "2104512456": ["Protokol privatnosti"],
+    "1180037097": ["Razina sigurnosti"],
+    "2078653050": ["Naziv sigurnosti"]
 });

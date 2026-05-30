@@ -241,5 +241,15 @@ Object.assign(__proxmox_i18n_msgcat__, {
     "1617678576": ["UPS podłączony przez USB lub kabel szeregowy do tego komputera"],
     "1746936716": ["UPS z kartą zarządzania SNMP, dostępny przez sieć"],
     "925696748": ["ID dostawcy"],
-    "1022348107": ["Tak — udostępnij UPS w sieci"]
+    "1022348107": ["Tak — udostępnij UPS w sieci"],
+    "1892453679": ["Tylko uwierzytelnianie"],
+    "853211134": ["Uwierzytelnianie + prywatność"],
+    "355684032": ["Hasło uwierzytelniania"],
+    "140263213": ["Protokół uwierzytelniania"],
+    "90463781": ["min. 8 znaków"],
+    "451852295": ["Bez uwierzytelniania i prywatności"],
+    "360776269": ["Hasło prywatności"],
+    "2104512456": ["Protokół prywatności"],
+    "1180037097": ["Poziom bezpieczeństwa"],
+    "2078653050": ["Nazwa bezpieczeństwa"]
 });

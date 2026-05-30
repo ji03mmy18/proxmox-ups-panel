@@ -241,5 +241,15 @@ Object.assign(__proxmox_i18n_msgcat__, {
     "1617678576": ["UPS kopla til via USB eller seriell kabel"],
     "1746936716": ["UPS med SNMP-administrasjonskort, tilgjengeleg via nettverket"],
     "925696748": ["Leverandør-ID"],
-    "1022348107": ["Ja — del UPS over nettverket"]
+    "1022348107": ["Ja — del UPS over nettverket"],
+    "1892453679": ["Berre autentisering"],
+    "853211134": ["Autentisering + personvern"],
+    "355684032": ["Autentiseringspassord"],
+    "140263213": ["Autentiseringsprotokoll"],
+    "90463781": ["min. 8 teikn"],
+    "451852295": ["Ingen autentisering, ingen personvern"],
+    "360776269": ["Personvernpassord"],
+    "2104512456": ["Personvernprotokoll"],
+    "1180037097": ["Tryggleiksnivå"],
+    "2078653050": ["Tryggleiksnamn"]
 });

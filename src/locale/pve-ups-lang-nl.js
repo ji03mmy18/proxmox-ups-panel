@@ -241,5 +241,15 @@ Object.assign(__proxmox_i18n_msgcat__, {
     "1617678576": ["UPS aangesloten via USB of seriële kabel op deze machine"],
     "1746936716": ["UPS met SNMP-beheerkaart, bereikbaar via het netwerk"],
     "925696748": ["Leverancier-ID"],
-    "1022348107": ["Ja — UPS via netwerk delen"]
+    "1022348107": ["Ja — UPS via netwerk delen"],
+    "1892453679": ["Alleen authenticatie"],
+    "853211134": ["Authenticatie + privacy"],
+    "355684032": ["Authenticatiewachtwoord"],
+    "140263213": ["Authenticatieprotocol"],
+    "90463781": ["min. 8 tekens"],
+    "451852295": ["Geen auth., geen privacy"],
+    "360776269": ["Privacywachtwoord"],
+    "2104512456": ["Privacyprotocol"],
+    "1180037097": ["Beveiligingsniveau"],
+    "2078653050": ["Beveiligingsnaam"]
 });

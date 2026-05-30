@@ -241,5 +241,15 @@ Object.assign(__proxmox_i18n_msgcat__, {
     "1617678576": ["UPS USB edo kable serialaren bidez konektatuta dago makina honetara"],
     "1746936716": ["SNMP kudeaketa-txartelarekin UPS, sarearen bidez eskuragarri"],
     "925696748": ["Fabrikatzaile-IDa"],
-    "1022348107": ["Bai — UPS partekatu sarean"]
+    "1022348107": ["Bai — UPS partekatu sarean"],
+    "1892453679": ["Autentifikazioa soilik"],
+    "853211134": ["Autentifikazioa + pribatutasuna"],
+    "355684032": ["Autentifikazio-pasahitza"],
+    "140263213": ["Autentifikazio-protokoloa"],
+    "90463781": ["gutxienez 8 karaktere"],
+    "451852295": ["Autentifikaziorik eta pribatutasunik gabe"],
+    "360776269": ["Pribatutasun-pasahitza"],
+    "2104512456": ["Pribatutasun-protokoloa"],
+    "1180037097": ["Segurtasun maila"],
+    "2078653050": ["Segurtasun izena"]
 });

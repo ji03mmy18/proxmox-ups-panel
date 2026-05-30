@@ -241,5 +241,15 @@ Object.assign(__proxmox_i18n_msgcat__, {
     "1617678576": ["UPS connectat per USB o cable sèrie a aquest equip"],
     "1746936716": ["UPS amb targeta de gestió SNMP, accessible per la xarxa"],
     "925696748": ["ID del proveïdor"],
-    "1022348107": ["Sí — compartir UPS per la xarxa"]
+    "1022348107": ["Sí — compartir UPS per la xarxa"],
+    "1892453679": ["Només autenticació"],
+    "853211134": ["Autenticació + privadesa"],
+    "355684032": ["Contrasenya d'autenticació"],
+    "140263213": ["Protocol d'autenticació"],
+    "90463781": ["mín. 8 caràcters"],
+    "451852295": ["Sense autenticació ni privadesa"],
+    "360776269": ["Contrasenya de privadesa"],
+    "2104512456": ["Protocol de privadesa"],
+    "1180037097": ["Nivell de seguretat"],
+    "2078653050": ["Nom de seguretat"]
 });

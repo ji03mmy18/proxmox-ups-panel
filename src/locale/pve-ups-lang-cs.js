@@ -241,5 +241,15 @@ Object.assign(__proxmox_i18n_msgcat__, {
     "1617678576": ["UPS připojena k tomuto počítači přes USB nebo sériový kabel"],
     "1746936716": ["UPS se správní kartou SNMP, dostupná přes síť"],
     "925696748": ["ID výrobce"],
-    "1022348107": ["Ano — sdílet UPS v síti"]
+    "1022348107": ["Ano — sdílet UPS v síti"],
+    "1892453679": ["Pouze autentizace"],
+    "853211134": ["Autentizace + šifrování"],
+    "355684032": ["Autentizační heslo"],
+    "140263213": ["Autentizační protokol"],
+    "90463781": ["min. 8 znaků"],
+    "451852295": ["Bez autentizace a šifrování"],
+    "360776269": ["Šifrovací heslo"],
+    "2104512456": ["Šifrovací protokol"],
+    "1180037097": ["Úroveň zabezpečení"],
+    "2078653050": ["Bezpečnostní jméno"]
 });

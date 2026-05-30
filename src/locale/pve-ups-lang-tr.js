@@ -241,5 +241,15 @@ Object.assign(__proxmox_i18n_msgcat__, {
     "1617678576": ["Bu makineye USB veya seri kablo ile bağlı UPS"],
     "1746936716": ["SNMP yönetim kartlı UPS, ağ üzerinden erişilebilir"],
     "925696748": ["Satıcı kimliği"],
-    "1022348107": ["Evet — UPS'i ağ üzerinden paylaş"]
+    "1022348107": ["Evet — UPS'i ağ üzerinden paylaş"],
+    "1892453679": ["Yalnızca kimlik doğrulama"],
+    "853211134": ["Kimlik doğrulama + gizlilik"],
+    "355684032": ["Kimlik doğrulama parolası"],
+    "140263213": ["Kimlik doğrulama protokolü"],
+    "90463781": ["en az 8 karakter"],
+    "451852295": ["Kimlik doğrulama ve gizlilik yok"],
+    "360776269": ["Gizlilik parolası"],
+    "2104512456": ["Gizlilik protokolü"],
+    "1180037097": ["Güvenlik seviyesi"],
+    "2078653050": ["Güvenlik adı"]
 });

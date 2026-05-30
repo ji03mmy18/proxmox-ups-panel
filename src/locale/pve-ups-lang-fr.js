@@ -241,5 +241,15 @@ Object.assign(__proxmox_i18n_msgcat__, {
     "1617678576": ["Onduleur connecté via USB ou câble série à cet ordinateur"],
     "1746936716": ["Onduleur avec carte de gestion SNMP, accessible via le réseau"],
     "925696748": ["ID fournisseur"],
-    "1022348107": ["Oui — partager l'onduleur sur le réseau"]
+    "1022348107": ["Oui — partager l'onduleur sur le réseau"],
+    "1892453679": ["Authentification seulement"],
+    "853211134": ["Authentification + confidentialité"],
+    "355684032": ["Mot de passe d'authentification"],
+    "140263213": ["Protocole d'authentification"],
+    "90463781": ["8 caractères min."],
+    "451852295": ["Sans authentification ni confidentialité"],
+    "360776269": ["Mot de passe de confidentialité"],
+    "2104512456": ["Protocole de confidentialité"],
+    "1180037097": ["Niveau de sécurité"],
+    "2078653050": ["Nom de sécurité"]
 });

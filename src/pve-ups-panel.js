@@ -425,13 +425,6 @@ Ext.define('PVE.ups.SetupWizard', {
                                 emptyText: gettext('e.g. 192.168.1.100'),
                             },
                             {
-                                xtype: 'textfield',
-                                name: 'wizSnmpCommunity',
-                                fieldLabel: gettext('Community'),
-                                labelWidth: 150,
-                                value: 'public',
-                            },
-                            {
                                 xtype: 'combobox',
                                 name: 'wizSnmpVersion',
                                 fieldLabel: gettext('SNMP Version'),
@@ -439,6 +432,14 @@ Ext.define('PVE.ups.SetupWizard', {
                                 value: 'v2c',
                                 store: [['v1', 'v1'], ['v2c', 'v2c'], ['v3', 'v3']],
                                 editable: false,
+                                listeners: {
+                                    change: function (f, val) {
+                                        var card = f.up('#wizSnmpCard');
+                                        var isV3 = (val === 'v3');
+                                        card.down('#wizSnmpCommunityField').setVisible(!isV3);
+                                        card.down('#wizSnmpV3Cont').setVisible(isV3);
+                                    },
+                                },
                             },
                             {
                                 xtype: 'textfield',
@@ -447,6 +448,106 @@ Ext.define('PVE.ups.SetupWizard', {
                                 labelWidth: 150,
                                 value: 'ietf',
                                 emptyText: gettext('e.g. ietf, mge, apc'),
+                            },
+                            // v1/v2c: community string
+                            {
+                                xtype: 'textfield',
+                                itemId: 'wizSnmpCommunityField',
+                                name: 'wizSnmpCommunity',
+                                fieldLabel: gettext('Community'),
+                                labelWidth: 150,
+                                value: 'public',
+                            },
+                            // v3: account + security level
+                            {
+                                xtype: 'container',
+                                itemId: 'wizSnmpV3Cont',
+                                hidden: true,
+                                layout: 'anchor',
+                                defaults: { anchor: '100%' },
+                                items: [
+                                    {
+                                        xtype: 'textfield',
+                                        name: 'wizSnmpSecName',
+                                        fieldLabel: gettext('Security Name'),
+                                        labelWidth: 150,
+                                        emptyText: 'SNMPv3 username',
+                                    },
+                                    {
+                                        xtype: 'combobox',
+                                        name: 'wizSnmpSecLevel',
+                                        itemId: 'wizSnmpSecLevel',
+                                        fieldLabel: gettext('Security Level'),
+                                        labelWidth: 150,
+                                        value: 'authNoPriv',
+                                        store: [
+                                            ['noAuthNoPriv', gettext('No Auth, No Privacy')],
+                                            ['authNoPriv',   gettext('Auth Only')],
+                                            ['authPriv',     gettext('Auth + Privacy')],
+                                        ],
+                                        editable: false,
+                                        listeners: {
+                                            change: function (f, val) {
+                                                var card = f.up('#wizSnmpCard');
+                                                card.down('#wizSnmpAuthCont').setVisible(val !== 'noAuthNoPriv');
+                                                card.down('#wizSnmpPrivCont').setVisible(val === 'authPriv');
+                                            },
+                                        },
+                                    },
+                                    {
+                                        xtype: 'container',
+                                        itemId: 'wizSnmpAuthCont',
+                                        layout: 'anchor',
+                                        defaults: { anchor: '100%' },
+                                        items: [
+                                            {
+                                                xtype: 'combobox',
+                                                name: 'wizSnmpAuthProtocol',
+                                                fieldLabel: gettext('Auth Protocol'),
+                                                labelWidth: 150,
+                                                value: 'SHA',
+                                                store: [['MD5','MD5'],['SHA','SHA'],['SHA-256','SHA-256'],
+                                                        ['SHA-384','SHA-384'],['SHA-512','SHA-512']],
+                                                editable: false,
+                                            },
+                                            {
+                                                xtype: 'textfield',
+                                                name: 'wizSnmpAuthPassword',
+                                                fieldLabel: gettext('Auth Password'),
+                                                labelWidth: 150,
+                                                inputType: 'password',
+                                                emptyText: gettext('min. 8 characters'),
+                                            },
+                                        ],
+                                    },
+                                    {
+                                        xtype: 'container',
+                                        itemId: 'wizSnmpPrivCont',
+                                        hidden: true,
+                                        layout: 'anchor',
+                                        defaults: { anchor: '100%' },
+                                        items: [
+                                            {
+                                                xtype: 'combobox',
+                                                name: 'wizSnmpPrivProtocol',
+                                                fieldLabel: gettext('Priv Protocol'),
+                                                labelWidth: 150,
+                                                value: 'AES',
+                                                store: [['DES','DES'],['AES','AES'],
+                                                        ['AES-192','AES-192'],['AES-256','AES-256']],
+                                                editable: false,
+                                            },
+                                            {
+                                                xtype: 'textfield',
+                                                name: 'wizSnmpPrivPassword',
+                                                fieldLabel: gettext('Priv Password'),
+                                                labelWidth: 150,
+                                                inputType: 'password',
+                                                emptyText: gettext('min. 8 characters'),
+                                            },
+                                        ],
+                                    },
+                                ],
                             },
                         ],
                     },
@@ -582,11 +683,24 @@ Ext.define('PVE.ups.SetupWizard', {
                         if (vals.wizUsbVid)    params.vendorid  = vals.wizUsbVid;
                         if (vals.wizUsbPid)    params.productid = vals.wizUsbPid;
                     } else if (type === 'snmp') {
-                        params.name         = vals.wizSnmpName      || 'ups';
-                        params.snmphost     = vals.wizSnmpHost       || '';
-                        params.community    = vals.wizSnmpCommunity  || 'public';
-                        params.snmp_version = vals.wizSnmpVersion    || 'v2c';
-                        params.mibs         = vals.wizSnmpMibs       || 'ietf';
+                        params.name         = vals.wizSnmpName    || 'ups';
+                        params.snmphost     = vals.wizSnmpHost    || '';
+                        params.snmp_version = vals.wizSnmpVersion || 'v2c';
+                        params.mibs         = vals.wizSnmpMibs    || 'ietf';
+                        if (params.snmp_version === 'v3') {
+                            params.sec_name  = vals.wizSnmpSecName     || '';
+                            params.sec_level = vals.wizSnmpSecLevel    || 'noAuthNoPriv';
+                            if (params.sec_level !== 'noAuthNoPriv') {
+                                params.auth_protocol = vals.wizSnmpAuthProtocol || 'SHA';
+                                if (vals.wizSnmpAuthPassword) params.auth_password = vals.wizSnmpAuthPassword;
+                            }
+                            if (params.sec_level === 'authPriv') {
+                                params.priv_protocol = vals.wizSnmpPrivProtocol || 'AES';
+                                if (vals.wizSnmpPrivPassword) params.priv_password = vals.wizSnmpPrivPassword;
+                            }
+                        } else {
+                            params.community = vals.wizSnmpCommunity || 'public';
+                        }
                     } else {
                         params.name     = vals.wizRemoteName || 'ups';
                         params.nuthost  = vals.wizRemoteHost || '';
@@ -652,11 +766,20 @@ Ext.define('PVE.ups.SetupWizard', {
                             if (vals.wizUsbVid)    data.push({ key: gettext('Vendor ID'),  value: vals.wizUsbVid });
                             if (vals.wizUsbPid)    data.push({ key: gettext('Product ID'), value: vals.wizUsbPid });
                         } else if (type === 'snmp') {
-                            data.push({ key: gettext('Device Name'),   value: vals.wizSnmpName     || 'ups' });
-                            data.push({ key: gettext('SNMP Host'),      value: vals.wizSnmpHost     || '' });
-                            data.push({ key: gettext('Community'),      value: vals.wizSnmpCommunity || 'public' });
-                            data.push({ key: gettext('SNMP Version'),   value: vals.wizSnmpVersion  || 'v2c' });
-                            data.push({ key: gettext('MIBs'),           value: vals.wizSnmpMibs     || 'ietf' });
+                            var sVer = vals.wizSnmpVersion || 'v2c';
+                            data.push({ key: gettext('Device Name'),   value: vals.wizSnmpName || 'ups' });
+                            data.push({ key: gettext('SNMP Host'),      value: vals.wizSnmpHost || '' });
+                            data.push({ key: gettext('SNMP Version'),   value: sVer });
+                            data.push({ key: gettext('MIBs'),           value: vals.wizSnmpMibs || 'ietf' });
+                            if (sVer === 'v3') {
+                                data.push({ key: gettext('Security Name'),  value: vals.wizSnmpSecName  || '' });
+                                data.push({ key: gettext('Security Level'), value: vals.wizSnmpSecLevel || 'noAuthNoPriv' });
+                                if ((vals.wizSnmpSecLevel || 'noAuthNoPriv') !== 'noAuthNoPriv') {
+                                    data.push({ key: gettext('Auth Protocol'), value: vals.wizSnmpAuthProtocol || 'SHA' });
+                                }
+                            } else {
+                                data.push({ key: gettext('Community'),  value: vals.wizSnmpCommunity || 'public' });
+                            }
                         } else {
                             data.push({ key: gettext('UPS Name'),   value: vals.wizRemoteName || 'ups' });
                             data.push({ key: gettext('NUT Server'), value: (vals.wizRemoteHost || '') + ':' + (vals.wizRemotePort || 3493) });
@@ -1266,22 +1389,107 @@ Ext.define('PVE.ups.DeviceEditWindow', {
             value: (initialType === 'snmp') ? (dev.port || '') : '',
         });
 
-        me._communityField = Ext.create('Ext.form.field.Text', {
-            fieldLabel: gettext('Community'),
-            value: dev.community || 'public',
-        });
+        var initSnmpVer = (initialType === 'snmp') ? (dev.snmp_version || 'v2c') : 'v2c';
+        var initIsV3    = (initSnmpVer === 'v3');
+        var initSecLvl  = dev.seclevel || 'authNoPriv';
 
         me._snmpVersionField = Ext.create('Ext.form.field.ComboBox', {
             fieldLabel: gettext('SNMP Version'),
-            value: dev.snmp_version || 'v2c',
+            value: initSnmpVer,
             store: [['v1', 'v1'], ['v2c', 'v2c'], ['v3', 'v3']],
             editable: false,
+            listeners: {
+                change: function (f, val) {
+                    var isV3 = (val === 'v3');
+                    me._communityField.setVisible(!isV3);
+                    me._snmpV3Fields.setVisible(isV3);
+                },
+            },
         });
 
         me._mibsField = Ext.create('Ext.form.field.Text', {
             fieldLabel: gettext('MIBs'),
-            value: dev.mibs || 'ietf',
+            value: (initialType === 'snmp') ? (dev.mibs || 'ietf') : 'ietf',
             emptyText: gettext('e.g. ietf, mge, apc'),
+        });
+
+        me._communityField = Ext.create('Ext.form.field.Text', {
+            fieldLabel: gettext('Community'),
+            value: dev.community || 'public',
+            hidden: initIsV3,
+        });
+
+        // ── SNMPv3 欄位群組 ───────────────────────────────────────────
+        me._secNameField = Ext.create('Ext.form.field.Text', {
+            fieldLabel: gettext('Security Name'),
+            value: dev.secname || '',
+            emptyText: 'SNMPv3 username',
+        });
+
+        me._authProtocolField = Ext.create('Ext.form.field.ComboBox', {
+            fieldLabel: gettext('Auth Protocol'),
+            value: dev.authprotocol || 'SHA',
+            store: [['MD5','MD5'],['SHA','SHA'],['SHA-256','SHA-256'],['SHA-384','SHA-384'],['SHA-512','SHA-512']],
+            editable: false,
+        });
+
+        me._authPasswordField = Ext.create('Ext.form.field.Text', {
+            fieldLabel: gettext('Auth Password'),
+            inputType: 'password',
+            value: dev.authpassword || '',
+            emptyText: gettext('min. 8 characters'),
+        });
+
+        me._snmpAuthFields = Ext.create('Ext.container.Container', {
+            hidden: initSecLvl === 'noAuthNoPriv',
+            defaults: { anchor: '100%' },
+            layout: 'anchor',
+            items: [me._authProtocolField, me._authPasswordField],
+        });
+
+        me._privProtocolField = Ext.create('Ext.form.field.ComboBox', {
+            fieldLabel: gettext('Priv Protocol'),
+            value: dev.privprotocol || 'AES',
+            store: [['DES','DES'],['AES','AES'],['AES-192','AES-192'],['AES-256','AES-256']],
+            editable: false,
+        });
+
+        me._privPasswordField = Ext.create('Ext.form.field.Text', {
+            fieldLabel: gettext('Priv Password'),
+            inputType: 'password',
+            value: dev.privpassword || '',
+            emptyText: gettext('min. 8 characters'),
+        });
+
+        me._snmpPrivFields = Ext.create('Ext.container.Container', {
+            hidden: initSecLvl !== 'authPriv',
+            defaults: { anchor: '100%' },
+            layout: 'anchor',
+            items: [me._privProtocolField, me._privPasswordField],
+        });
+
+        me._secLevelField = Ext.create('Ext.form.field.ComboBox', {
+            fieldLabel: gettext('Security Level'),
+            value: initSecLvl,
+            store: [
+                ['noAuthNoPriv', gettext('No Auth, No Privacy')],
+                ['authNoPriv',   gettext('Auth Only')],
+                ['authPriv',     gettext('Auth + Privacy')],
+            ],
+            editable: false,
+            listeners: {
+                change: function (f, val) {
+                    me._snmpAuthFields.setVisible(val !== 'noAuthNoPriv');
+                    me._snmpPrivFields.setVisible(val === 'authPriv');
+                },
+            },
+        });
+
+        me._snmpV3Fields = Ext.create('Ext.container.Container', {
+            hidden: !initIsV3,
+            defaults: { anchor: '100%' },
+            layout: 'anchor',
+            items: [me._secNameField, me._secLevelField, me._snmpAuthFields, me._snmpPrivFields],
         });
 
         me._snmpDescField = Ext.create('Ext.form.field.Text', {
@@ -1293,8 +1501,8 @@ Ext.define('PVE.ups.DeviceEditWindow', {
             hidden: initialType !== 'snmp',
             defaults: { anchor: '100%' },
             layout: 'anchor',
-            items: [me._snmpNameField, me._snmpHostField, me._communityField,
-                    me._snmpVersionField, me._mibsField, me._snmpDescField],
+            items: [me._snmpNameField, me._snmpHostField, me._snmpVersionField,
+                    me._mibsField, me._communityField, me._snmpV3Fields, me._snmpDescField],
         });
 
         // ── Remote NUT Server fields ─────────────────────────────────────
@@ -1439,10 +1647,35 @@ Ext.define('PVE.ups.DeviceEditWindow', {
                             if (!me._snmpHostField.validate()) return;
                             params.name         = me._snmpNameField.getValue();
                             params.snmphost     = me._snmpHostField.getValue();
-                            params.community    = me._communityField.getValue()    || 'public';
                             params.snmp_version = me._snmpVersionField.getValue()  || 'v2c';
                             params.mibs         = me._mibsField.getValue()         || 'ietf';
                             params.desc         = me._snmpDescField.getValue()     || '';
+                            if (params.snmp_version === 'v3') {
+                                params.sec_name  = me._secNameField.getValue()  || '';
+                                params.sec_level = me._secLevelField.getValue() || 'noAuthNoPriv';
+                                if (params.sec_level !== 'noAuthNoPriv') {
+                                    var ap = me._authPasswordField.getValue();
+                                    if (ap && ap.length < 8) {
+                                        Ext.Msg.alert(gettext('Error'),
+                                            gettext('Auth Password must be at least 8 characters.'));
+                                        return;
+                                    }
+                                    params.auth_protocol = me._authProtocolField.getValue();
+                                    if (ap) params.auth_password = ap;
+                                }
+                                if (params.sec_level === 'authPriv') {
+                                    var pp = me._privPasswordField.getValue();
+                                    if (pp && pp.length < 8) {
+                                        Ext.Msg.alert(gettext('Error'),
+                                            gettext('Priv Password must be at least 8 characters.'));
+                                        return;
+                                    }
+                                    params.priv_protocol = me._privProtocolField.getValue();
+                                    if (pp) params.priv_password = pp;
+                                }
+                            } else {
+                                params.community = me._communityField.getValue() || 'public';
+                            }
                             if (me.device && me.device.name !== params.name) {
                                 params.oldname = me.device.name;
                             }
@@ -1587,7 +1820,8 @@ Ext.define('PVE.ups.DevicePanel', {
         me._deviceStore = Ext.create('Ext.data.Store', {
             fields: ['name', 'type', 'driver', 'port', 'desc', 'serial',
                      'vendorid', 'productid', 'status', 'host', 'nutport',
-                     'username', 'community', 'snmp_version', 'mibs'],
+                     'username', 'community', 'snmp_version', 'mibs',
+                     'seclevel', 'secname', 'authprotocol', 'privprotocol'],
             data: [],
         });
 
@@ -1806,11 +2040,24 @@ Ext.define('PVE.ups.DevicePanel', {
             data.push({ key: gettext('Product ID (PID)'),value: rec.get('productid') || '--' });
             data.push({ key: gettext('Description'),     value: rec.get('desc')      || '--' });
         } else if (type === 'snmp') {
-            data.push({ key: gettext('SNMP Host'),    value: rec.get('port')         || '--' });
-            data.push({ key: gettext('Community'),    value: rec.get('community')    || '--' });
-            data.push({ key: gettext('SNMP Version'), value: rec.get('snmp_version') || '--' });
-            data.push({ key: gettext('MIBs'),         value: rec.get('mibs')         || '--' });
-            data.push({ key: gettext('Description'),  value: rec.get('desc')         || '--' });
+            var snmpVer = rec.get('snmp_version') || 'v2c';
+            data.push({ key: gettext('SNMP Host'),    value: rec.get('port')  || '--' });
+            data.push({ key: gettext('SNMP Version'), value: snmpVer });
+            if (snmpVer === 'v3') {
+                data.push({ key: gettext('Security Level'), value: rec.get('seclevel')     || '--' });
+                data.push({ key: gettext('Security Name'),  value: rec.get('secname')      || '--' });
+                var lvl = rec.get('seclevel') || '';
+                if (lvl === 'authNoPriv' || lvl === 'authPriv') {
+                    data.push({ key: gettext('Auth Protocol'), value: rec.get('authprotocol') || '--' });
+                }
+                if (lvl === 'authPriv') {
+                    data.push({ key: gettext('Priv Protocol'), value: rec.get('privprotocol') || '--' });
+                }
+            } else {
+                data.push({ key: gettext('Community'), value: rec.get('community') || '--' });
+            }
+            data.push({ key: gettext('MIBs'),         value: rec.get('mibs')  || '--' });
+            data.push({ key: gettext('Description'),  value: rec.get('desc')  || '--' });
         } else {
             data.push({ key: gettext('NUT Server'),  value: (rec.get('host') || '--') + ':' + (rec.get('nutport') || 3493) });
             data.push({ key: gettext('Username'),    value: rec.get('username') || '--' });

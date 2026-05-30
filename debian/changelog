@@ -1,3 +1,36 @@
+pve-ups-panel (2.2.1) stable; urgency=low
+
+  * Config.pm: add SNMPv3 support. _generate_ups_conf writes secLevel,
+    secName, authProtocol, authPassword, privProtocol, privPassword fields
+    (NUT camelCase keys). add_device POST accepts sec_level, sec_name,
+    auth_protocol, auth_password, priv_protocol, priv_password params;
+    v3 path skips community and writes SNMPv3 fields instead. list_devices
+    returns schema extended with seclevel, secname, authprotocol,
+    privprotocol optional fields.
+  * pve-ups-panel.js: DeviceEditWindow SNMP section restructured. Version
+    ComboBox now fires a change listener that shows/hides the Community
+    field (v1/v2c) vs. the v3 field group. SNMPv3 group: Security Name
+    textfield, Security Level ComboBox (noAuthNoPriv / authNoPriv /
+    authPriv), Auth Protocol ComboBox, Auth Password field, Priv Protocol
+    ComboBox, Priv Password field. Auth and Priv sub-containers show/hide
+    based on Security Level selection.
+  * pve-ups-panel.js: SetupWizard SNMP card (wizSnmpCard) updated with
+    the same v3 field group structure using itemId-based show/hide via
+    f.up('#wizSnmpCard').down('#id') lookups. onSubmit and summary
+    activate handler both updated to include v3 parameters when
+    snmp_version is v3.
+  * pve-ups-panel.js: DevicePanel _showDevice updated. SNMP type detail
+    now shows Community for v1/v2c and Security Level / Security Name /
+    Auth Protocol / Priv Protocol for v3 (passwords never shown).
+    Device store fields extended with seclevel, secname, authprotocol,
+    privprotocol.
+  * i18n: add 10 SNMPv3 strings (Security Level, Security Name, Auth
+    Protocol, Auth Password, Priv Protocol, Priv Password, No Auth No
+    Privacy, Auth Only, Auth + Privacy, min. 8 characters) in 31
+    languages.
+
+ -- YoMin Su <aaaa1234567891016@gmail.com>  Sat, 31 May 2026 12:00:00 +0800
+
 pve-ups-panel (2.2.0) stable; urgency=medium
 
   * Architecture: replace per-device mode (standalone/netserver/netclient)

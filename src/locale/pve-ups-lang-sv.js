@@ -241,5 +241,15 @@ Object.assign(__proxmox_i18n_msgcat__, {
     "1617678576": ["UPS ansluten via USB eller seriell kabel till den här maskinen"],
     "1746936716": ["UPS med SNMP-hanteringskort, nåbar via nätverket"],
     "925696748": ["Leverantörs-ID"],
-    "1022348107": ["Ja — dela UPS över nätverket"]
+    "1022348107": ["Ja — dela UPS över nätverket"],
+    "1892453679": ["Endast autentisering"],
+    "853211134": ["Autentisering + integritet"],
+    "355684032": ["Autentiseringslösenord"],
+    "140263213": ["Autentiseringsprotokoll"],
+    "90463781": ["min. 8 tecken"],
+    "451852295": ["Ingen autentisering, ingen integritet"],
+    "360776269": ["Integritetslösenord"],
+    "2104512456": ["Integritetsprotokoll"],
+    "1180037097": ["Säkerhetsnivå"],
+    "2078653050": ["Säkerhetsnamn"]
 });

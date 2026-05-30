@@ -241,5 +241,15 @@ Object.assign(__proxmox_i18n_msgcat__, {
     "1617678576": ["USV über USB oder serielles Kabel mit diesem Gerät verbunden"],
     "1746936716": ["USV mit SNMP-Verwaltungskarte, über das Netzwerk erreichbar"],
     "925696748": ["Anbieter-ID"],
-    "1022348107": ["Ja — USV im Netzwerk freigeben"]
+    "1022348107": ["Ja — USV im Netzwerk freigeben"],
+    "1892453679": ["Nur Authentifizierung"],
+    "853211134": ["Authentifizierung + Verschlüsselung"],
+    "355684032": ["Auth-Passwort"],
+    "140263213": ["Auth-Protokoll"],
+    "90463781": ["mind. 8 Zeichen"],
+    "451852295": ["Keine Auth., keine Verschlüsselung"],
+    "360776269": ["Verschlüsselungspasswort"],
+    "2104512456": ["Verschlüsselungsprotokoll"],
+    "1180037097": ["Sicherheitsstufe"],
+    "2078653050": ["Sicherheitsname"]
 });
