@@ -1,3 +1,17 @@
+pve-ups-panel (2.2.6) stable; urgency=medium
+
+  * pve-ups-panel.js: fix remote device name in DeviceSelector. Config.pm
+    list_devices returns the bare UPS name (e.g. "myups") for remote
+    devices, while upsc and the _available list require the full target
+    "name@host[:port]". _loadDevices now reconstructs the full target for
+    type=remote entries before firing deviceschanged, so the Overview /
+    History / Battery Health selectors receive and pass the correct
+    "myups@192.168.1.100" string to the ups= parameter. Previously the
+    plain name "myups" was sent, causing upsc to query the wrong (local)
+    upsd and return no data.
+
+ -- YoMin Su <aaaa1234567891016@gmail.com>  Sun, 01 Jun 2026 01:00:00 +0800
+
 pve-ups-panel (2.2.5) stable; urgency=low
 
   * Config.pm: add GET /ups/config/version endpoint. Runs dpkg-query to

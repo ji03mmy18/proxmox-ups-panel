@@ -2165,7 +2165,15 @@ Ext.define('PVE.ups.DevicePanel', {
                 var list = ((response.result || {}).data) || [];
                 me._deviceStore.removeAll();
                 me._deviceStore.add(list);
-                var names = Ext.Array.map(list, function (d) { return d.name; });
+                // 遠端裝置需要以 "name@host[:port]" 格式傳給 upsc；
+                // 本機裝置直接用 name 即可
+                var names = Ext.Array.map(list, function (d) {
+                    if (d.type === 'remote' && d.host) {
+                        var p = d.nutport;
+                        return d.name + '@' + d.host + (p && p !== 3493 ? ':' + p : '');
+                    }
+                    return d.name;
+                });
                 me.fireEvent('deviceschanged', me, names);
             },
             failure: function () {},
