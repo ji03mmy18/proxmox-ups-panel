@@ -1,3 +1,17 @@
+pve-ups-panel (2.2.4) stable; urgency=low
+
+  * Config.pm: fix NOTIFYCMD disappearing from upsmon.conf. Previously
+    _build_upsmon_conf only preserved NOTIFYCMD if it already existed in
+    the file; since it is only written by Notify.pm when the user saves
+    notification rules, any device add/delete before that first save
+    would produce a upsmon.conf without NOTIFYCMD, silently disabling
+    all notifications. Fix: add $NOTIFY_CMD constant to Config.pm and
+    always emit NOTIFYCMD in _build_upsmon_conf output. NOTIFYFLAG lines
+    are still read from the existing file so Notify.pm's live updates
+    are preserved across config rewrites.
+
+ -- YoMin Su <aaaa1234567891016@gmail.com>  Sat, 31 May 2026 22:00:00 +0800
+
 pve-ups-panel (2.2.3) stable; urgency=low
 
   * pve-ups-panel.js: fix Server Settings button never visible. Removed
