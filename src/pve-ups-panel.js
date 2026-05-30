@@ -207,7 +207,7 @@ Ext.define('PVE.ups.SetupDialog', {
 });
 
 // =========================================================================
-// PVE.ups.SetupWizard — 3 步設定精靈（PVE.window.Wizard）
+// PVE.ups.SetupWizard — 4 步設定精靈（PVE.window.Wizard）
 // =========================================================================
 Ext.define('PVE.ups.SetupWizard', {
     extend: 'PVE.window.Wizard',
@@ -220,40 +220,75 @@ Ext.define('PVE.ups.SetupWizard', {
         var me = this;
 
         me.items = [
-            // ── Step 1: 選擇連線模式 ────────────────────────────────────
+            // ── Step 1: 是否開放其他電腦連線 ──────────────────────────
             {
-                title: gettext('Connection Mode'),
+                title: gettext('Network Access'),
                 xtype: 'inputpanel',
                 items: [{
                     xtype: 'radiogroup',
                     columns: 1,
                     vertical: true,
-                    itemId: 'modeGroup',
                     items: [
                         {
-                            boxLabel: '<b>' + gettext('Direct Connection (USB / Serial)') + '</b>' +
+                            boxLabel: '<b>' + gettext('No — standalone mode') + '</b>' +
                                       '<br><span style="font-weight:normal;color:#666;padding-left:22px;">' +
-                                      gettext('UPS is physically connected to this machine') + '</span>',
-                            name: 'upsMode',
+                                      gettext('This machine monitors its own UPS locally, no network sharing') + '</span>',
+                            name: 'wizNetworkAccess',
                             inputValue: 'standalone',
                             checked: true,
                         },
                         {
-                            boxLabel: '<b>' + gettext('Remote NUT Server') + '</b>' +
+                            boxLabel: '<b>' + gettext('Yes — share UPS over network') + '</b>' +
                                       '<br><span style="font-weight:normal;color:#666;padding-left:22px;">' +
-                                      gettext('Connect to NUT Server on another machine') + '</span>',
-                            name: 'upsMode',
-                            inputValue: 'netclient',
+                                      gettext('Share locally configured UPS devices so other computers can connect') + '</span>',
+                            name: 'wizNetworkAccess',
+                            inputValue: 'netserver',
                             margin: '14 0 0 0',
                         },
                     ],
                 }],
             },
 
-            // ── Step 2: 設定（card layout 根據 Step 1 選擇切換） ────────
-            // 注意：兩個 card 的欄位使用不同 name 避免 getValues() 衝突
+            // ── Step 2: 裝置類型 ───────────────────────────────────────
             {
-                title: gettext('Configure'),
+                title: gettext('Device Type'),
+                xtype: 'inputpanel',
+                items: [{
+                    xtype: 'radiogroup',
+                    columns: 1,
+                    vertical: true,
+                    items: [
+                        {
+                            boxLabel: '<b>' + gettext('USB Device') + '</b>' +
+                                      '<br><span style="font-weight:normal;color:#666;padding-left:22px;">' +
+                                      gettext('UPS connected via USB or serial cable to this machine') + '</span>',
+                            name: 'wizDeviceType',
+                            inputValue: 'usb',
+                            checked: true,
+                        },
+                        {
+                            boxLabel: '<b>' + gettext('SNMP Device') + '</b>' +
+                                      '<br><span style="font-weight:normal;color:#666;padding-left:22px;">' +
+                                      gettext('UPS with SNMP management card, reachable over the network') + '</span>',
+                            name: 'wizDeviceType',
+                            inputValue: 'snmp',
+                            margin: '14 0 0 0',
+                        },
+                        {
+                            boxLabel: '<b>' + gettext('Remote NUT Server') + '</b>' +
+                                      '<br><span style="font-weight:normal;color:#666;padding-left:22px;">' +
+                                      gettext('Connect to a NUT server running on another machine') + '</span>',
+                            name: 'wizDeviceType',
+                            inputValue: 'remote',
+                            margin: '14 0 0 0',
+                        },
+                    ],
+                }],
+            },
+
+            // ── Step 3: 連線設定（card layout 根據 Step 2 切換） ───────
+            {
+                title: gettext('Connection Details'),
                 xtype: 'panel',
                 layout: 'card',
                 border: false,
@@ -262,82 +297,33 @@ Ext.define('PVE.ups.SetupWizard', {
                     if (!active) return true;
                     var fields = active.query('[isFormField]');
                     var valid = true;
-                    for (var i = 0; i < fields.length; i++) {
-                        if (Ext.isFunction(fields[i].validate)) fields[i].validate();
-                        if (Ext.isFunction(fields[i].isValid) && !fields[i].isValid()) {
-                            valid = false;
-                        }
-                    }
+                    Ext.Array.each(fields, function (f) {
+                        if (Ext.isFunction(f.validate)) f.validate();
+                        if (Ext.isFunction(f.isValid) && !f.isValid()) valid = false;
+                    });
                     return valid;
                 },
                 listeners: {
                     activate: function (panel) {
-                        var modeGroup = me.down('[itemId=modeGroup]');
-                        var vals = modeGroup ? modeGroup.getValue() : {};
-                        var mode = (vals && vals.upsMode) || 'standalone';
-                        panel.getLayout().setActiveItem(mode === 'netclient' ? 1 : 0);
-                        if (mode !== 'netclient') {
-                            var combo = me.down('#usbDeviceCombo');
-                            if (!combo) return;
-                            combo.setEmptyText(gettext('Scanning...'));
-                            combo.clearValue();
-                            combo.getStore().loadData([]);
-                            Proxmox.Utils.API2Request({
-                                url: '/nodes/' +
-                                     encodeURIComponent(me.nodename) +
-                                     '/ups/scan/usb',
-                                method: 'GET',
-                                success: function (response) {
-                                    var devs = ((response.result || {}).data) || [];
-                                    var storeData = Ext.Array.map(devs, function (d) {
-                                        return {
-                                            display: d.vendor && d.desc
-                                                ? d.vendor + ' — ' + d.desc
-                                                : (d.desc || d.vendor || d.vid + ':' + d.pid),
-                                            driver: d.driver,
-                                            serial: d.serial || '',
-                                            vid: d.vid,
-                                            pid: d.pid,
-                                        };
-                                    });
-                                    var store = combo.getStore();
-                                    store.removeAll();
-                                    store.add(storeData);
-                                    combo.setEmptyText(storeData.length > 0
-                                        ? gettext('Select detected device...')
-                                        : gettext('No USB UPS devices found'));
-                                    if (storeData.length === 1) {
-                                        combo.setValue(storeData[0].display);
-                                        var drv = me.down('[name=upsDriverLocal]');
-                                        if (drv) drv.setValue(storeData[0].driver);
-                                        var sn = me.down('[name=upsSerialLocal]');
-                                        if (sn && storeData[0].serial) sn.setValue(storeData[0].serial);
-                                        var vid = me.down('[name=upsVidLocal]');
-                                        if (vid && storeData[0].vid) vid.setValue(storeData[0].vid);
-                                        var pid = me.down('[name=upsPidLocal]');
-                                        if (pid && storeData[0].pid) pid.setValue(storeData[0].pid);
-                                    }
-                                },
-                                failure: function () {
-                                    combo.setEmptyText(gettext('Scan unavailable'));
-                                },
-                            });
-                        }
+                        var vals = me.getValues();
+                        var type = vals.wizDeviceType || 'usb';
+                        var idx  = { usb: 0, snmp: 1, remote: 2 }[type] || 0;
+                        panel.getLayout().setActiveItem(idx);
+                        if (type === 'usb') me._scanUsbWizard();
                     },
                 },
                 items: [
-                    // Card 0: 直連（USB / Serial）
+                    // Card 0: USB 裝置
                     {
                         xtype: 'inputpanel',
-                        itemId: 'standaloneCard',
+                        itemId: 'wizUsbCard',
                         bodyPadding: '10 0 0 0',
                         items: [
-                            // USB 裝置自動偵測下拉選單
                             {
                                 xtype: 'combobox',
-                                itemId: 'usbDeviceCombo',
-                                fieldLabel: gettext('USB Device'),
-                                labelWidth: 130,
+                                itemId: 'wizUsbCombo',
+                                fieldLabel: gettext('Detected Devices'),
+                                labelWidth: 150,
                                 emptyText: gettext('Scanning...'),
                                 queryMode: 'local',
                                 store: {
@@ -350,42 +336,53 @@ Ext.define('PVE.ups.SetupWizard', {
                                 forceSelection: false,
                                 margin: '0 0 8 0',
                                 listeners: {
-                                    select: function (combo, record) {
-                                        var drv = me.down('[name=upsDriverLocal]');
-                                        if (drv) drv.setValue(record.get('driver'));
-                                        var sn = me.down('[name=upsSerialLocal]');
-                                        if (sn) sn.setValue(record.get('serial') || '');
-                                        var vid = me.down('[name=upsVidLocal]');
-                                        if (vid) vid.setValue(record.get('vid') || '');
-                                        var pid = me.down('[name=upsPidLocal]');
-                                        if (pid) pid.setValue(record.get('pid') || '');
+                                    select: function (combo, rec) {
+                                        me.down('[name=wizUsbDriver]').setValue(rec.get('driver') || 'usbhid-ups');
+                                        me.down('[name=wizUsbSerial]').setValue(rec.get('serial') || '');
+                                        me.down('[name=wizUsbVid]').setValue(rec.get('vid') || '');
+                                        me.down('[name=wizUsbPid]').setValue(rec.get('pid') || '');
                                     },
                                 },
                             },
-                            // 表單欄位（standalone 專用 name，避免與 netclient 衝突）
                             {
                                 xtype: 'textfield',
-                                name: 'upsNameLocal',
+                                name: 'wizUsbName',
                                 fieldLabel: gettext('Device Name'),
-                                labelWidth: 130,
+                                labelWidth: 150,
                                 value: 'ups',
                                 allowBlank: false,
                                 regex: /^[a-zA-Z0-9_@.-]+$/,
-                                regexText: gettext('Alphanumeric, underscore, hyphen, dot, @'),
+                                regexText: gettext('Only alphanumeric, _, @, ., - allowed'),
+                            },
+                            {
+                                xtype: 'combobox',
+                                name: 'wizUsbDriver',
+                                fieldLabel: gettext('Driver'),
+                                labelWidth: 150,
+                                value: 'usbhid-ups',
+                                store: [
+                                    ['usbhid-ups',    'usbhid-ups — CyberPower / APC (USB HID)'],
+                                    ['blazer_usb',    'blazer_usb — Megatec / Q1 protocol'],
+                                    ['nutdrv_qx',     'nutdrv_qx — Voltronic / Blazer / Q1'],
+                                    ['tripplite_usb', 'tripplite_usb — Tripp Lite'],
+                                    ['richcomm_usb',  'richcomm_usb — Richcomm Technology'],
+                                    ['powercom',      'powercom — PowerCOM BNT series'],
+                                ],
+                                editable: false,
                             },
                             {
                                 xtype: 'textfield',
-                                name: 'upsSerialLocal',
+                                name: 'wizUsbSerial',
                                 fieldLabel: gettext('Serial Number'),
-                                labelWidth: 130,
+                                labelWidth: 150,
                                 emptyText: gettext('Optional — bind to specific device'),
                                 allowBlank: true,
                             },
                             {
                                 xtype: 'textfield',
-                                name: 'upsVidLocal',
+                                name: 'wizUsbVid',
                                 fieldLabel: gettext('Vendor ID (VID)'),
-                                labelWidth: 130,
+                                labelWidth: 150,
                                 emptyText: gettext('e.g. 0764'),
                                 allowBlank: true,
                                 regex: /^[0-9a-fA-F]{0,4}$/,
@@ -393,48 +390,83 @@ Ext.define('PVE.ups.SetupWizard', {
                             },
                             {
                                 xtype: 'textfield',
-                                name: 'upsPidLocal',
+                                name: 'wizUsbPid',
                                 fieldLabel: gettext('Product ID (PID)'),
-                                labelWidth: 130,
+                                labelWidth: 150,
                                 emptyText: gettext('e.g. 0601'),
                                 allowBlank: true,
                                 regex: /^[0-9a-fA-F]{0,4}$/,
                                 regexText: gettext('Up to 4 hex digits'),
                             },
-                            {
-                                xtype: 'combobox',
-                                name: 'upsDriverLocal',
-                                fieldLabel: gettext('Driver'),
-                                labelWidth: 130,
-                                value: 'usbhid-ups',
-                                store: [
-                                    ['usbhid-ups',      'usbhid-ups — CyberPower / APC (USB HID)'],
-                                    ['blazer_usb',      'blazer_usb — Megatec / Q1 protocol'],
-                                    ['nutdrv_qx',       'nutdrv_qx — Voltronic / Blazer / Q1'],
-                                    ['tripplite_usb',   'tripplite_usb — Tripp Lite'],
-                                    ['richcomm_usb',    'richcomm_usb — Richcomm Technology'],
-                                    ['powercom',        'powercom — PowerCOM BNT series'],
-                                ],
-                                editable: false,
-                            },
                         ],
                     },
-                    // Card 1: 遠端 NUT Server
+                    // Card 1: SNMP 裝置
                     {
                         xtype: 'inputpanel',
-                        itemId: 'netclientCard',
+                        itemId: 'wizSnmpCard',
                         bodyPadding: '10 0 0 0',
                         items: [
                             {
                                 xtype: 'textfield',
-                                name: 'nutHost',
+                                name: 'wizSnmpName',
+                                fieldLabel: gettext('Device Name'),
+                                labelWidth: 150,
+                                value: 'ups',
+                                allowBlank: false,
+                                regex: /^[a-zA-Z0-9_@.-]+$/,
+                                regexText: gettext('Only alphanumeric, _, @, ., - allowed'),
+                            },
+                            {
+                                xtype: 'textfield',
+                                name: 'wizSnmpHost',
+                                fieldLabel: gettext('SNMP Device IP / Host'),
+                                labelWidth: 150,
+                                allowBlank: false,
+                                emptyText: gettext('e.g. 192.168.1.100'),
+                            },
+                            {
+                                xtype: 'textfield',
+                                name: 'wizSnmpCommunity',
+                                fieldLabel: gettext('Community'),
+                                labelWidth: 150,
+                                value: 'public',
+                            },
+                            {
+                                xtype: 'combobox',
+                                name: 'wizSnmpVersion',
+                                fieldLabel: gettext('SNMP Version'),
+                                labelWidth: 150,
+                                value: 'v2c',
+                                store: [['v1', 'v1'], ['v2c', 'v2c'], ['v3', 'v3']],
+                                editable: false,
+                            },
+                            {
+                                xtype: 'textfield',
+                                name: 'wizSnmpMibs',
+                                fieldLabel: gettext('MIBs'),
+                                labelWidth: 150,
+                                value: 'ietf',
+                                emptyText: gettext('e.g. ietf, mge, apc'),
+                            },
+                        ],
+                    },
+                    // Card 2: 遠端 NUT Server
+                    {
+                        xtype: 'inputpanel',
+                        itemId: 'wizRemoteCard',
+                        bodyPadding: '10 0 0 0',
+                        items: [
+                            {
+                                xtype: 'textfield',
+                                name: 'wizRemoteHost',
                                 fieldLabel: gettext('NUT Server Address'),
                                 labelWidth: 160,
                                 allowBlank: false,
+                                emptyText: gettext('e.g. 192.168.1.100'),
                             },
                             {
                                 xtype: 'numberfield',
-                                name: 'nutPort',
+                                name: 'wizRemotePort',
                                 fieldLabel: gettext('Port'),
                                 labelWidth: 160,
                                 value: 3493,
@@ -443,7 +475,7 @@ Ext.define('PVE.ups.SetupWizard', {
                             },
                             {
                                 xtype: 'textfield',
-                                name: 'upsNameRemote',
+                                name: 'wizRemoteName',
                                 fieldLabel: gettext('UPS Name'),
                                 labelWidth: 160,
                                 value: 'ups',
@@ -451,69 +483,68 @@ Ext.define('PVE.ups.SetupWizard', {
                             },
                             {
                                 xtype: 'textfield',
-                                name: 'nutUser',
+                                name: 'wizRemoteUser',
                                 fieldLabel: gettext('Username'),
                                 labelWidth: 160,
                                 value: 'upsmon',
                             },
                             {
                                 xtype: 'textfield',
-                                inputType: 'password',
-                                name: 'nutPassword',
+                                name: 'wizRemotePass',
                                 fieldLabel: gettext('Password'),
                                 labelWidth: 160,
+                                inputType: 'password',
                             },
                             {
                                 xtype: 'button',
-                                itemId: 'testConnBtn',
                                 text: gettext('Test Connection'),
                                 iconCls: 'fa fa-plug',
                                 margin: '10 0 0 164',
                                 handler: function () {
-                                    var btn = this;
-                                    var host     = me.down('[name=nutHost]');
-                                    var port     = me.down('[name=nutPort]');
-                                    var ups      = me.down('[name=upsNameRemote]');
-                                    var resultCt = me.down('[itemId=connTestResult]');
+                                    var btn     = this;
+                                    var host    = me.down('[name=wizRemoteHost]');
+                                    var portFld = me.down('[name=wizRemotePort]');
+                                    var upsFld  = me.down('[name=wizRemoteName]');
+                                    var result  = me.down('[itemId=wizConnResult]');
                                     if (!host || !host.getValue()) {
                                         Ext.Msg.alert(gettext('Error'),
                                             gettext('Please enter a NUT server address.'));
                                         return;
                                     }
                                     btn.setDisabled(true);
-                                    resultCt.update(
+                                    result.update(
                                         '<span class="fa fa-spinner fa-spin" style="margin-right:6px"></span>' +
                                         gettext('Testing...')
                                     );
-                                    resultCt.setVisible(true);
+                                    result.setVisible(true);
                                     Proxmox.Utils.API2Request({
-                                        url: '/nodes/' +
-                                             encodeURIComponent(me.nodename) +
+                                        url: '/nodes/' + encodeURIComponent(me.nodename) +
                                              '/ups/scan/test-connection',
                                         method: 'POST',
                                         params: {
                                             host: host.getValue(),
-                                            port: port ? port.getValue() : 3493,
-                                            ups:  ups  ? ups.getValue()  : 'ups',
+                                            port: portFld ? portFld.getValue() : 3493,
+                                            ups:  upsFld  ? upsFld.getValue()  : 'ups',
                                         },
                                         success: function (response) {
                                             btn.setDisabled(false);
                                             var d = ((response.result || {}).data) || {};
                                             if (d.success) {
-                                                resultCt.update(
+                                                result.update(
                                                     '<span class="fa fa-check-circle" style="color:#21bf73;margin-right:6px"></span>' +
                                                     '<span style="color:#21bf73">' + gettext('Connection successful') + '</span>'
                                                 );
                                             } else {
-                                                resultCt.update(
+                                                result.update(
                                                     '<span class="fa fa-times-circle" style="color:#e74c3c;margin-right:6px"></span>' +
-                                                    '<span style="color:#e74c3c">' + Ext.String.htmlEncode(d.message) + '</span>'
+                                                    '<span style="color:#e74c3c">' +
+                                                    Ext.String.htmlEncode(d.message || gettext('Connection failed')) + '</span>'
                                                 );
                                             }
                                         },
-                                        failure: function (response) {
+                                        failure: function () {
                                             btn.setDisabled(false);
-                                            resultCt.update(
+                                            result.update(
                                                 '<span class="fa fa-times-circle" style="color:#e74c3c;margin-right:6px"></span>' +
                                                 '<span style="color:#e74c3c">' + gettext('Request failed') + '</span>'
                                             );
@@ -523,7 +554,7 @@ Ext.define('PVE.ups.SetupWizard', {
                             },
                             {
                                 xtype: 'container',
-                                itemId: 'connTestResult',
+                                itemId: 'wizConnResult',
                                 margin: '6 0 0 164',
                                 hidden: true,
                                 html: '',
@@ -533,41 +564,57 @@ Ext.define('PVE.ups.SetupWizard', {
                 ],
             },
 
-            // ── Step 3: 確認與套用 ──────────────────────────────────────
+            // ── Step 4: 確認與套用 ──────────────────────────────────────
             {
                 title: gettext('Confirm'),
                 layout: 'fit',
                 onSubmit: function () {
-                    var vals = me.getValues();
-                    var mode = vals.upsMode || 'standalone';
+                    var vals   = me.getValues();
+                    var mode   = vals.wizNetworkAccess || 'standalone';
+                    var type   = vals.wizDeviceType    || 'usb';
+                    var params = { type: type };
 
-                    var params = { mode: mode };
-                    if (mode === 'standalone' || mode === 'netserver') {
-                        params.name   = vals.upsNameLocal  || 'ups';
-                        params.driver = vals.upsDriverLocal || 'usbhid-ups';
+                    if (type === 'usb') {
+                        params.name   = vals.wizUsbName   || 'ups';
+                        params.driver = vals.wizUsbDriver  || 'usbhid-ups';
                         params.port   = 'auto';
-                        if (vals.upsSerialLocal) params.serial    = vals.upsSerialLocal;
-                        if (vals.upsVidLocal)    params.vendorid  = vals.upsVidLocal;
-                        if (vals.upsPidLocal)    params.productid = vals.upsPidLocal;
+                        if (vals.wizUsbSerial) params.serial    = vals.wizUsbSerial;
+                        if (vals.wizUsbVid)    params.vendorid  = vals.wizUsbVid;
+                        if (vals.wizUsbPid)    params.productid = vals.wizUsbPid;
+                    } else if (type === 'snmp') {
+                        params.name         = vals.wizSnmpName      || 'ups';
+                        params.snmphost     = vals.wizSnmpHost       || '';
+                        params.community    = vals.wizSnmpCommunity  || 'public';
+                        params.snmp_version = vals.wizSnmpVersion    || 'v2c';
+                        params.mibs         = vals.wizSnmpMibs       || 'ietf';
                     } else {
-                        params.name     = vals.upsNameRemote || 'ups';
-                        params.nuthost  = vals.nutHost;
-                        params.nutport  = parseInt(vals.nutPort, 10) || 3493;
-                        params.username = vals.nutUser     || 'upsmon';
-                        params.password = vals.nutPassword || '';
+                        params.name     = vals.wizRemoteName || 'ups';
+                        params.nuthost  = vals.wizRemoteHost || '';
+                        params.nutport  = parseInt(vals.wizRemotePort, 10) || 3493;
+                        params.username = vals.wizRemoteUser || 'upsmon';
+                        params.password = vals.wizRemotePass || '';
                     }
 
                     me.setLoading(true);
                     Proxmox.Utils.API2Request({
-                        url: '/nodes/' +
-                             encodeURIComponent(me.nodename) +
-                             '/ups/config/devices',
-                        method: 'POST',
-                        params: params,
+                        url: '/nodes/' + encodeURIComponent(me.nodename) + '/ups/config/mode',
+                        method: 'PUT',
+                        params: { mode: mode },
                         success: function () {
-                            me.setLoading(false);
-                            me.fireEvent('applied', me);
-                            me.close();
+                            Proxmox.Utils.API2Request({
+                                url: '/nodes/' + encodeURIComponent(me.nodename) + '/ups/config/devices',
+                                method: 'POST',
+                                params: params,
+                                success: function () {
+                                    me.setLoading(false);
+                                    me.fireEvent('applied', me);
+                                    me.close();
+                                },
+                                failure: function (response) {
+                                    me.setLoading(false);
+                                    Ext.Msg.alert(gettext('Error'), response.htmlStatus);
+                                },
+                            });
                         },
                         failure: function (response) {
                             me.setLoading(false);
@@ -587,36 +634,33 @@ Ext.define('PVE.ups.SetupWizard', {
                 }],
                 listeners: {
                     activate: function (panel) {
-                        var vals = me.getValues();
-                        var mode = vals.upsMode || 'standalone';
+                        var vals  = me.getValues();
+                        var mode  = vals.wizNetworkAccess || 'standalone';
+                        var type  = vals.wizDeviceType    || 'usb';
+                        var modeLabel = mode === 'netserver'
+                            ? gettext('Enabled (share over network)')
+                            : gettext('Disabled (standalone)');
+                        var typeLabels = { usb: 'USB', snmp: 'SNMP', remote: gettext('Remote NUT Server') };
                         var data = [
-                            { key: gettext('Connection Mode'), value: mode },
+                            { key: gettext('Network Sharing'), value: modeLabel },
+                            { key: gettext('Device Type'),     value: typeLabels[type] || type },
                         ];
-                        if (mode === 'standalone' || mode === 'netserver') {
-                            data.push({ key: gettext('Device Name'),
-                                        value: vals.upsNameLocal || 'ups' });
-                            if (vals.upsSerialLocal) {
-                                data.push({ key: gettext('Serial Number'),
-                                            value: vals.upsSerialLocal });
-                            }
-                            if (vals.upsVidLocal) {
-                                data.push({ key: gettext('Vendor ID (VID)'),
-                                            value: vals.upsVidLocal });
-                            }
-                            if (vals.upsPidLocal) {
-                                data.push({ key: gettext('Product ID (PID)'),
-                                            value: vals.upsPidLocal });
-                            }
-                            data.push({ key: gettext('Driver'),
-                                        value: vals.upsDriverLocal || 'usbhid-ups' });
+                        if (type === 'usb') {
+                            data.push({ key: gettext('Device Name'), value: vals.wizUsbName   || 'ups' });
+                            data.push({ key: gettext('Driver'),      value: vals.wizUsbDriver  || 'usbhid-ups' });
+                            if (vals.wizUsbSerial) data.push({ key: gettext('Serial'),     value: vals.wizUsbSerial });
+                            if (vals.wizUsbVid)    data.push({ key: gettext('Vendor ID'),  value: vals.wizUsbVid });
+                            if (vals.wizUsbPid)    data.push({ key: gettext('Product ID'), value: vals.wizUsbPid });
+                        } else if (type === 'snmp') {
+                            data.push({ key: gettext('Device Name'),   value: vals.wizSnmpName     || 'ups' });
+                            data.push({ key: gettext('SNMP Host'),      value: vals.wizSnmpHost     || '' });
+                            data.push({ key: gettext('Community'),      value: vals.wizSnmpCommunity || 'public' });
+                            data.push({ key: gettext('SNMP Version'),   value: vals.wizSnmpVersion  || 'v2c' });
+                            data.push({ key: gettext('MIBs'),           value: vals.wizSnmpMibs     || 'ietf' });
                         } else {
-                            data.push({ key: gettext('NUT Server'),
-                                        value: (vals.nutHost || '') + ':' + (vals.nutPort || 3493) });
-                            data.push({ key: gettext('UPS Name'),
-                                        value: vals.upsNameRemote || 'ups' });
-                            if (vals.nutUser) {
-                                data.push({ key: gettext('Username'), value: vals.nutUser });
-                            }
+                            data.push({ key: gettext('UPS Name'),   value: vals.wizRemoteName || 'ups' });
+                            data.push({ key: gettext('NUT Server'), value: (vals.wizRemoteHost || '') + ':' + (vals.wizRemotePort || 3493) });
+                            if (vals.wizRemoteUser) data.push({ key: gettext('Username'), value: vals.wizRemoteUser });
                         }
                         var store = panel.down('grid').getStore();
                         store.suspendEvents();
@@ -630,6 +674,50 @@ Ext.define('PVE.ups.SetupWizard', {
         ];
 
         me.callParent();
+    },
+
+    _scanUsbWizard: function () {
+        var me = this;
+        if (!me.nodename) return;
+        var combo = me.down('[itemId=wizUsbCombo]');
+        if (!combo) return;
+        combo.setEmptyText(gettext('Scanning...'));
+        combo.clearValue();
+        combo.getStore().loadData([]);
+        Proxmox.Utils.API2Request({
+            url: '/nodes/' + encodeURIComponent(me.nodename) + '/ups/scan/usb',
+            method: 'GET',
+            success: function (response) {
+                var devs = ((response.result || {}).data) || [];
+                var data = Ext.Array.map(devs, function (d) {
+                    return {
+                        display: d.vendor && d.desc
+                            ? d.vendor + ' — ' + d.desc
+                            : (d.desc || d.vendor || d.vid + ':' + d.pid),
+                        driver: d.driver || 'usbhid-ups',
+                        serial: d.serial || '',
+                        vid: d.vid || '',
+                        pid: d.pid || '',
+                    };
+                });
+                var store = combo.getStore();
+                store.removeAll();
+                store.add(data);
+                combo.setEmptyText(data.length > 0
+                    ? gettext('Select detected device...')
+                    : gettext('No USB UPS devices found'));
+                if (data.length === 1) {
+                    combo.setValue(data[0].display);
+                    me.down('[name=wizUsbDriver]').setValue(data[0].driver);
+                    if (data[0].serial) me.down('[name=wizUsbSerial]').setValue(data[0].serial);
+                    if (data[0].vid)    me.down('[name=wizUsbVid]').setValue(data[0].vid);
+                    if (data[0].pid)    me.down('[name=wizUsbPid]').setValue(data[0].pid);
+                }
+            },
+            failure: function () {
+                combo.setEmptyText(gettext('Scan unavailable'));
+            },
+        });
     },
 });
 
@@ -813,7 +901,7 @@ Ext.define('PVE.ups.Overview', {
                             xtype: 'component',
                             itemId: 'nutClientStatus',
                             width: 220,
-                            html: '<b>nut-client</b> &nbsp;' +
+                            html: '<b>nut-monitor</b> &nbsp;' +
                                   '<span class="fa fa-circle" style="color:#ccc;"></span> --',
                         },
                         {
@@ -821,7 +909,7 @@ Ext.define('PVE.ups.Overview', {
                             itemId: 'nutClientRestart',
                             text: gettext('Restart'),
                             iconCls: 'fa fa-refresh',
-                            handler: function () { me._restartService('nut-client'); },
+                            handler: function () { me._restartService('nut-monitor'); },
                         },
                     ],
                 }],
@@ -932,8 +1020,8 @@ Ext.define('PVE.ups.Overview', {
         if (data._services) {
             me._setServiceStatus('nutServerStatus', 'nut-server',
                 data._services['nut-server']);
-            me._setServiceStatus('nutClientStatus', 'nut-client',
-                data._services['nut-client']);
+            me._setServiceStatus('nutClientStatus', 'nut-monitor',
+                data._services['nut-monitor']);
         }
     },
 
@@ -1020,7 +1108,7 @@ Ext.define('PVE.ups.DeviceEditWindow', {
     alias: 'widget.pveUpsDeviceEditWindow',
 
     title: gettext('Add UPS Device'),
-    width: 520,
+    width: 540,
     modal: true,
     resizable: false,
     nodename: null,
@@ -1038,48 +1126,35 @@ Ext.define('PVE.ups.DeviceEditWindow', {
             me.title = gettext('Edit UPS Device');
         }
 
+        var dev        = me.device || {};
+        var initialType = dev.type || 'usb';
+
         // ── USB scan store ────────────────────────────────────────────────
         me._usbStore = Ext.create('Ext.data.Store', {
             fields: ['display', 'driver', 'serial', 'vid', 'pid'],
         });
 
-        me._scanUsb = function () {
-            if (!me.nodename) return;
-            Proxmox.Utils.API2Request({
-                url: '/nodes/' + encodeURIComponent(me.nodename) + '/ups/scan/usb',
-                method: 'GET',
-                success: function (response) {
-                    var list = ((response.result || {}).data) || [];
-                    me._usbStore.removeAll();
-                    me._usbStore.add(Ext.Array.map(list, function (d) {
-                        var label = (d.vendor && d.desc)
-                            ? (d.vendor + ' — ' + d.desc)
-                            : (d.desc || d.vendor || (d.vid + ':' + d.pid));
-                        return { display: label, driver: d.driver, serial: d.serial, vid: d.vid, pid: d.pid };
-                    }));
-                },
-            });
-        };
-
-        // ── Mode radio ───────────────────────────────────────────────────
-        me._modeRadio = Ext.create('Ext.form.RadioGroup', {
-            fieldLabel: gettext('Mode'),
+        // ── Type radio ───────────────────────────────────────────────────
+        me._typeRadio = Ext.create('Ext.form.RadioGroup', {
+            fieldLabel: gettext('Device Type'),
             columns: 3,
             items: [
-                { boxLabel: 'Standalone',  name: 'upsMode', inputValue: 'standalone',  checked: true },
-                { boxLabel: 'Net Server',  name: 'upsMode', inputValue: 'netserver'  },
-                { boxLabel: 'Net Client',  name: 'upsMode', inputValue: 'netclient'  },
+                { boxLabel: 'USB',    name: 'devType', inputValue: 'usb',    checked: initialType === 'usb' },
+                { boxLabel: 'SNMP',   name: 'devType', inputValue: 'snmp',   checked: initialType === 'snmp' },
+                { boxLabel: gettext('Remote NUT'), name: 'devType', inputValue: 'remote', checked: initialType === 'remote' },
             ],
             listeners: {
                 change: function (grp, val) {
-                    var isClient = (val.upsMode === 'netclient');
-                    me._directFields.setVisible(!isClient);
-                    me._remoteFields.setVisible(isClient);
+                    var t = val.devType || 'usb';
+                    me._usbFields.setVisible(t === 'usb');
+                    me._snmpFields.setVisible(t === 'snmp');
+                    me._remoteFields.setVisible(t === 'remote');
+                    if (t === 'usb') me._doScanUsb();
                 },
             },
         });
 
-        // ── Fields: standalone / netserver ──────────────────────────────
+        // ── USB fields ───────────────────────────────────────────────────
         me._usbCombo = Ext.create('Ext.form.field.ComboBox', {
             fieldLabel: gettext('Detected Devices'),
             store: me._usbStore,
@@ -1087,46 +1162,52 @@ Ext.define('PVE.ups.DeviceEditWindow', {
             displayField: 'display',
             queryMode: 'local',
             editable: false,
-            emptyText: gettext('No UPS detected'),
+            emptyText: gettext('Scanning...'),
             listeners: {
                 select: function (combo, rec) {
-                    me._driverField.setValue(rec.get('driver'));
-                    if (rec.get('serial')) me._serialField.setValue(rec.get('serial'));
-                    if (rec.get('vid'))    me._vidField.setValue(rec.get('vid'));
-                    if (rec.get('pid'))    me._pidField.setValue(rec.get('pid'));
+                    me._usbDriverField.setValue(rec.get('driver') || 'usbhid-ups');
+                    me._serialField.setValue(rec.get('serial') || '');
+                    me._vidField.setValue(rec.get('vid') || '');
+                    me._pidField.setValue(rec.get('pid') || '');
                 },
             },
         });
 
-        me._nameField = Ext.create('Ext.form.field.Text', {
+        me._usbNameField = Ext.create('Ext.form.field.Text', {
             fieldLabel: gettext('Device Name'),
             allowBlank: false,
             regex: /^[a-zA-Z0-9_@.-]+$/,
             regexText: gettext('Only alphanumeric, _, @, ., - allowed'),
-            value: me.device ? me.device.name : 'ups',
+            value: dev.name || 'ups',
             validator: function (val) {
                 if (!me.device) {
-                    var taken = me.existingNames || [];
-                    if (Ext.Array.contains(taken, val)) {
+                    if (Ext.Array.contains(me.existingNames || [], val)) {
                         return gettext('Device name already in use');
                     }
                 }
                 return true;
             },
-            listeners: {
-                change: function () {
-                    var saveBtn = me.down('#saveBtn');
-                    if (saveBtn) {
-                        saveBtn.setDisabled(!me._nameField.isValid());
-                    }
-                },
-            },
+        });
+
+        me._usbDriverField = Ext.create('Ext.form.field.ComboBox', {
+            fieldLabel: gettext('Driver'),
+            allowBlank: false,
+            value: dev.driver || 'usbhid-ups',
+            store: [
+                ['usbhid-ups',    'usbhid-ups — CyberPower / APC (USB HID)'],
+                ['blazer_usb',    'blazer_usb — Megatec / Q1 protocol'],
+                ['nutdrv_qx',     'nutdrv_qx — Voltronic / Blazer / Q1'],
+                ['tripplite_usb', 'tripplite_usb — Tripp Lite'],
+                ['richcomm_usb',  'richcomm_usb — Richcomm Technology'],
+                ['powercom',      'powercom — PowerCOM BNT series'],
+            ],
+            editable: false,
         });
 
         me._serialField = Ext.create('Ext.form.field.Text', {
             fieldLabel: gettext('Serial Number'),
             emptyText: gettext('Optional — bind to specific device'),
-            value: me.device ? (me.device.serial || '') : '',
+            value: dev.serial || '',
         });
 
         me._vidField = Ext.create('Ext.form.field.Text', {
@@ -1135,7 +1216,7 @@ Ext.define('PVE.ups.DeviceEditWindow', {
             allowBlank: true,
             regex: /^[0-9a-fA-F]{0,4}$/,
             regexText: gettext('Up to 4 hex digits'),
-            value: me.device ? (me.device.vendorid || '') : '',
+            value: dev.vendorid || '',
         });
 
         me._pidField = Ext.create('Ext.form.field.Text', {
@@ -1144,43 +1225,88 @@ Ext.define('PVE.ups.DeviceEditWindow', {
             allowBlank: true,
             regex: /^[0-9a-fA-F]{0,4}$/,
             regexText: gettext('Up to 4 hex digits'),
-            value: me.device ? (me.device.productid || '') : '',
+            value: dev.productid || '',
         });
 
-        me._driverField = Ext.create('Ext.form.field.Text', {
-            fieldLabel: gettext('Driver'),
-            allowBlank: false,
-            value: me.device ? (me.device.driver || 'usbhid-ups') : 'usbhid-ups',
-        });
-
-        me._portField = Ext.create('Ext.form.field.Text', {
-            fieldLabel: gettext('Port'),
-            allowBlank: false,
-            value: me.device ? (me.device.port || 'auto') : 'auto',
-        });
-
-        me._descField = Ext.create('Ext.form.field.Text', {
+        me._usbDescField = Ext.create('Ext.form.field.Text', {
             fieldLabel: gettext('Description'),
-            value: me.device ? (me.device.desc || '') : '',
+            value: dev.desc || '',
         });
 
-        me._directFields = Ext.create('Ext.container.Container', {
+        me._usbFields = Ext.create('Ext.container.Container', {
+            hidden: initialType !== 'usb',
             defaults: { anchor: '100%' },
             layout: 'anchor',
-            items: [me._usbCombo, me._nameField, me._serialField, me._vidField, me._pidField, me._driverField, me._portField, me._descField],
+            items: [me._usbCombo, me._usbNameField, me._usbDriverField,
+                    me._serialField, me._vidField, me._pidField, me._usbDescField],
         });
 
-        // ── Fields: netclient ────────────────────────────────────────────
+        // ── SNMP fields ──────────────────────────────────────────────────
+        // SNMP 裝置的 IP 存在 ups.conf port 欄位
+        me._snmpNameField = Ext.create('Ext.form.field.Text', {
+            fieldLabel: gettext('Device Name'),
+            allowBlank: false,
+            regex: /^[a-zA-Z0-9_@.-]+$/,
+            regexText: gettext('Only alphanumeric, _, @, ., - allowed'),
+            value: dev.name || 'ups',
+            validator: function (val) {
+                if (!me.device) {
+                    if (Ext.Array.contains(me.existingNames || [], val)) {
+                        return gettext('Device name already in use');
+                    }
+                }
+                return true;
+            },
+        });
+
+        me._snmpHostField = Ext.create('Ext.form.field.Text', {
+            fieldLabel: gettext('SNMP Device IP / Host'),
+            allowBlank: false,
+            emptyText: gettext('e.g. 192.168.1.100'),
+            value: (initialType === 'snmp') ? (dev.port || '') : '',
+        });
+
+        me._communityField = Ext.create('Ext.form.field.Text', {
+            fieldLabel: gettext('Community'),
+            value: dev.community || 'public',
+        });
+
+        me._snmpVersionField = Ext.create('Ext.form.field.ComboBox', {
+            fieldLabel: gettext('SNMP Version'),
+            value: dev.snmp_version || 'v2c',
+            store: [['v1', 'v1'], ['v2c', 'v2c'], ['v3', 'v3']],
+            editable: false,
+        });
+
+        me._mibsField = Ext.create('Ext.form.field.Text', {
+            fieldLabel: gettext('MIBs'),
+            value: dev.mibs || 'ietf',
+            emptyText: gettext('e.g. ietf, mge, apc'),
+        });
+
+        me._snmpDescField = Ext.create('Ext.form.field.Text', {
+            fieldLabel: gettext('Description'),
+            value: dev.desc || '',
+        });
+
+        me._snmpFields = Ext.create('Ext.container.Container', {
+            hidden: initialType !== 'snmp',
+            defaults: { anchor: '100%' },
+            layout: 'anchor',
+            items: [me._snmpNameField, me._snmpHostField, me._communityField,
+                    me._snmpVersionField, me._mibsField, me._snmpDescField],
+        });
+
+        // ── Remote NUT Server fields ─────────────────────────────────────
         me._nutHostField = Ext.create('Ext.form.field.Text', {
             fieldLabel: gettext('NUT Server Host'),
             allowBlank: false,
-            value: '',
+            value: dev.host || '',
         });
 
         me._nutPortField = Ext.create('Ext.form.field.Number', {
             fieldLabel: gettext('Port'),
-            allowBlank: false,
-            value: 3493,
+            value: dev.nutport || 3493,
             minValue: 1,
             maxValue: 65535,
         });
@@ -1188,12 +1314,12 @@ Ext.define('PVE.ups.DeviceEditWindow', {
         me._remoteUpsField = Ext.create('Ext.form.field.Text', {
             fieldLabel: gettext('UPS Name'),
             allowBlank: false,
-            value: 'ups',
+            value: dev.name || 'ups',
         });
 
         me._remoteUserField = Ext.create('Ext.form.field.Text', {
             fieldLabel: gettext('Username'),
-            value: 'upsmon',
+            value: dev.username || 'upsmon',
         });
 
         me._remotePassField = Ext.create('Ext.form.field.Text', {
@@ -1202,19 +1328,84 @@ Ext.define('PVE.ups.DeviceEditWindow', {
             value: '',
         });
 
-        me._remoteFields = Ext.create('Ext.container.Container', {
+        me._connTestResult = Ext.create('Ext.container.Container', {
+            margin: '6 0 0 155',
             hidden: true,
+            html: '',
+        });
+
+        me._remoteFields = Ext.create('Ext.container.Container', {
+            hidden: initialType !== 'remote',
             defaults: { anchor: '100%' },
             layout: 'anchor',
-            items: [me._nutHostField, me._nutPortField, me._remoteUpsField, me._remoteUserField, me._remotePassField],
+            items: [
+                me._nutHostField,
+                me._nutPortField,
+                me._remoteUpsField,
+                me._remoteUserField,
+                me._remotePassField,
+                {
+                    xtype: 'button',
+                    text: gettext('Test Connection'),
+                    iconCls: 'fa fa-plug',
+                    margin: '10 0 0 155',
+                    handler: function () {
+                        var btn = this;
+                        if (!me._nutHostField.getValue()) {
+                            Ext.Msg.alert(gettext('Error'),
+                                gettext('Please enter a NUT server address.'));
+                            return;
+                        }
+                        btn.setDisabled(true);
+                        me._connTestResult.update(
+                            '<span class="fa fa-spinner fa-spin" style="margin-right:6px"></span>' +
+                            gettext('Testing...')
+                        );
+                        me._connTestResult.setVisible(true);
+                        Proxmox.Utils.API2Request({
+                            url: '/nodes/' + encodeURIComponent(me.nodename) +
+                                 '/ups/scan/test-connection',
+                            method: 'POST',
+                            params: {
+                                host: me._nutHostField.getValue(),
+                                port: me._nutPortField.getValue() || 3493,
+                                ups:  me._remoteUpsField.getValue() || 'ups',
+                            },
+                            success: function (response) {
+                                btn.setDisabled(false);
+                                var d = ((response.result || {}).data) || {};
+                                if (d.success) {
+                                    me._connTestResult.update(
+                                        '<span class="fa fa-check-circle" style="color:#21bf73;margin-right:6px"></span>' +
+                                        '<span style="color:#21bf73">' + gettext('Connection successful') + '</span>'
+                                    );
+                                } else {
+                                    me._connTestResult.update(
+                                        '<span class="fa fa-times-circle" style="color:#e74c3c;margin-right:6px"></span>' +
+                                        '<span style="color:#e74c3c">' +
+                                        Ext.String.htmlEncode(d.message || gettext('Connection failed')) + '</span>'
+                                    );
+                                }
+                            },
+                            failure: function () {
+                                btn.setDisabled(false);
+                                me._connTestResult.update(
+                                    '<span class="fa fa-times-circle" style="color:#e74c3c;margin-right:6px"></span>' +
+                                    '<span style="color:#e74c3c">' + gettext('Request failed') + '</span>'
+                                );
+                            },
+                        });
+                    },
+                },
+                me._connTestResult,
+            ],
         });
 
         me._form = Ext.create('Ext.form.Panel', {
             bodyPadding: 15,
             border: false,
-            defaultType: 'textfield',
-            defaults: { labelWidth: 150, anchor: '100%' },
-            items: [me._modeRadio, me._directFields, me._remoteFields],
+            defaults: { labelWidth: 155, anchor: '100%' },
+            items: [me._typeRadio, me._usbFields, me._snmpFields, me._remoteFields],
         });
 
         Ext.apply(me, {
@@ -1223,36 +1414,49 @@ Ext.define('PVE.ups.DeviceEditWindow', {
                 {
                     text: gettext('Save'),
                     itemId: 'saveBtn',
-                    formBind: false,
                     handler: function () {
-                        var mode = (me._modeRadio.getValue() || {}).upsMode || 'standalone';
-                        var params = { mode: mode };
+                        var type   = (me._typeRadio.getValue() || {}).devType || 'usb';
+                        var params = { type: type };
 
-                        if (mode === 'standalone' || mode === 'netserver') {
-                            if (!me._nameField.validate()) return;
-                            if (!me._driverField.validate()) return;
-                            if (!me._portField.validate()) return;
-                            params.name   = me._nameField.getValue();
-                            params.driver = me._driverField.getValue();
-                            params.port   = me._portField.getValue();
-                            params.desc   = me._descField.getValue() || '';
+                        if (type === 'usb') {
+                            if (!me._usbNameField.validate()) return;
+                            if (!me._usbDriverField.validate()) return;
+                            params.name   = me._usbNameField.getValue();
+                            params.driver = me._usbDriverField.getValue();
+                            params.port   = 'auto';
+                            params.desc   = me._usbDescField.getValue() || '';
                             var serial = me._serialField.getValue();
-                            if (serial) params.serial = serial;
-                            var vid = me._vidField.getValue();
-                            if (vid) params.vendorid = vid;
-                            var pid = me._pidField.getValue();
-                            if (pid) params.productid = pid;
+                            if (serial) params.serial    = serial;
+                            var vid    = me._vidField.getValue();
+                            if (vid)    params.vendorid  = vid;
+                            var pid    = me._pidField.getValue();
+                            if (pid)    params.productid = pid;
+                            if (me.device && me.device.name !== params.name) {
+                                params.oldname = me.device.name;
+                            }
+                        } else if (type === 'snmp') {
+                            if (!me._snmpNameField.validate()) return;
+                            if (!me._snmpHostField.validate()) return;
+                            params.name         = me._snmpNameField.getValue();
+                            params.snmphost     = me._snmpHostField.getValue();
+                            params.community    = me._communityField.getValue()    || 'public';
+                            params.snmp_version = me._snmpVersionField.getValue()  || 'v2c';
+                            params.mibs         = me._mibsField.getValue()         || 'ietf';
+                            params.desc         = me._snmpDescField.getValue()     || '';
                             if (me.device && me.device.name !== params.name) {
                                 params.oldname = me.device.name;
                             }
                         } else {
                             if (!me._nutHostField.validate()) return;
                             if (!me._remoteUpsField.validate()) return;
-                            params.nuthost  = me._nutHostField.getValue();
-                            params.nutport  = me._nutPortField.getValue();
                             params.name     = me._remoteUpsField.getValue();
+                            params.nuthost  = me._nutHostField.getValue();
+                            params.nutport  = me._nutPortField.getValue() || 3493;
                             params.username = me._remoteUserField.getValue() || 'upsmon';
                             params.password = me._remotePassField.getValue() || '';
+                            if (me.device && me.device.name !== params.name) {
+                                params.oldname = me.device.name;
+                            }
                         }
 
                         Proxmox.Utils.API2Request({
@@ -1265,8 +1469,7 @@ Ext.define('PVE.ups.DeviceEditWindow', {
                                 me.close();
                             },
                             failure: function (response) {
-                                var msg = ((response.result || {}).message) || gettext('Unknown error');
-                                Ext.Msg.alert(gettext('Error'), msg);
+                                Ext.Msg.alert(gettext('Error'), response.htmlStatus);
                             },
                         });
                     },
@@ -1278,16 +1481,39 @@ Ext.define('PVE.ups.DeviceEditWindow', {
             ],
             listeners: {
                 afterrender: function () {
-                    me._scanUsb();
-                    if (me.device) {
-                        var m = me.device.mode || 'standalone';
-                        me._modeRadio.setValue({ upsMode: m });
-                    }
+                    if (initialType === 'usb') me._doScanUsb();
                 },
             },
         });
 
         me.callParent();
+    },
+
+    _doScanUsb: function () {
+        var me = this;
+        if (!me.nodename) return;
+        me._usbCombo.setEmptyText(gettext('Scanning...'));
+        Proxmox.Utils.API2Request({
+            url: '/nodes/' + encodeURIComponent(me.nodename) + '/ups/scan/usb',
+            method: 'GET',
+            success: function (response) {
+                var list = ((response.result || {}).data) || [];
+                me._usbStore.removeAll();
+                me._usbStore.add(Ext.Array.map(list, function (d) {
+                    var label = (d.vendor && d.desc)
+                        ? (d.vendor + ' — ' + d.desc)
+                        : (d.desc || d.vendor || (d.vid + ':' + d.pid));
+                    return { display: label, driver: d.driver || 'usbhid-ups',
+                             serial: d.serial || '', vid: d.vid || '', pid: d.pid || '' };
+                }));
+                me._usbCombo.setEmptyText(list.length > 0
+                    ? gettext('Select detected device...')
+                    : gettext('No USB UPS devices found'));
+            },
+            failure: function () {
+                me._usbCombo.setEmptyText(gettext('Scan unavailable'));
+            },
+        });
     },
 });
 
@@ -1306,22 +1532,75 @@ Ext.define('PVE.ups.DevicePanel', {
     initComponent: function () {
         var me = this;
 
+        me._mode = 'standalone';
+
+        // ── Mode toggle bar (docked at top) ──────────────────────────────
+        me._modeLabelCt = Ext.create('Ext.toolbar.TextItem', {
+            itemId: 'modeLabel',
+            html: gettext('Network sharing:') + ' <span style="color:#bbb">...</span>',
+        });
+
+        me._modeBar = {
+            xtype: 'toolbar',
+            dock: 'top',
+            items: [
+                me._modeLabelCt,
+                ' ',
+                {
+                    xtype: 'button',
+                    itemId: 'modeDisabledBtn',
+                    text: gettext('Disabled'),
+                    enableToggle: true,
+                    pressed: true,
+                    allowDepress: false,
+                    toggleGroup: 'upsModeToggle',
+                    listeners: {
+                        toggle: function (btn, pressed) {
+                            if (pressed) me._setMode('standalone');
+                        },
+                    },
+                },
+                {
+                    xtype: 'button',
+                    itemId: 'modeEnabledBtn',
+                    text: gettext('Enabled'),
+                    enableToggle: true,
+                    allowDepress: false,
+                    toggleGroup: 'upsModeToggle',
+                    listeners: {
+                        toggle: function (btn, pressed) {
+                            if (pressed) me._setMode('netserver');
+                        },
+                    },
+                },
+                '-',
+                {
+                    xtype: 'tbtext',
+                    html: '<span style="color:#888;font-size:11px;">' +
+                          gettext('Enabled: other computers can connect to this UPS over the network') +
+                          '</span>',
+                },
+            ],
+        };
+
         // ── Device list grid (west) ──────────────────────────────────────
         me._deviceStore = Ext.create('Ext.data.Store', {
-            fields: ['name', 'driver', 'port', 'desc', 'serial', 'vendorid', 'productid', 'status', 'mode'],
+            fields: ['name', 'type', 'driver', 'port', 'desc', 'serial',
+                     'vendorid', 'productid', 'status', 'host', 'nutport',
+                     'username', 'community', 'snmp_version', 'mibs'],
             data: [],
         });
 
         me._deviceGrid = Ext.create('Ext.grid.Panel', {
             store: me._deviceStore,
             border: false,
-            hideHeaders: false,
             selModel: { mode: 'SINGLE' },
             columns: [
                 {
                     header: gettext('Status'),
-                    flex: 2,
+                    width: 60,
                     dataIndex: 'status',
+                    align: 'center',
                     renderer: function (v) {
                         var color = (v === 'connected') ? '#4caf50' : '#bbb';
                         return '<span style="display:inline-block;width:10px;height:10px;' +
@@ -1329,8 +1608,17 @@ Ext.define('PVE.ups.DevicePanel', {
                     },
                 },
                 {
+                    header: gettext('Type'),
+                    width: 75,
+                    dataIndex: 'type',
+                    renderer: function (v) {
+                        var labels = { usb: 'USB', snmp: 'SNMP', remote: gettext('Remote') };
+                        return labels[v] || (v || '--');
+                    },
+                },
+                {
                     header: gettext('Name'),
-                    flex: 8,
+                    flex: 1,
                     dataIndex: 'name',
                 },
             ],
@@ -1364,7 +1652,7 @@ Ext.define('PVE.ups.DevicePanel', {
             border: false,
             hideHeaders: true,
             columns: [
-                { dataIndex: 'key',   width: 150, renderer: function (v) {
+                { dataIndex: 'key', width: 160, renderer: function (v) {
                     return '<span style="color:#888;">' + Ext.htmlEncode(v) + '</span>';
                 }},
                 { dataIndex: 'value', flex: 1, renderer: Ext.htmlEncode },
@@ -1391,8 +1679,9 @@ Ext.define('PVE.ups.DevicePanel', {
                         var sel = me._deviceGrid.getSelection();
                         if (!sel.length) return;
                         var name = sel[0].get('name');
-                        Ext.Msg.confirm(gettext('Confirm'), Ext.String.format(
-                            gettext("Delete device '{0}'?"), name),
+                        Ext.Msg.confirm(
+                            gettext('Confirm'),
+                            Ext.String.format(gettext("Delete device '{0}'?"), name),
                             function (btn) {
                                 if (btn !== 'yes') return;
                                 me._deleteDevice(name);
@@ -1404,10 +1693,11 @@ Ext.define('PVE.ups.DevicePanel', {
         });
 
         Ext.apply(me, {
+            dockedItems: [me._modeBar],
             items: [
                 {
                     region: 'west',
-                    width: 300,
+                    width: 240,
                     split: true,
                     border: true,
                     layout: 'fit',
@@ -1424,12 +1714,63 @@ Ext.define('PVE.ups.DevicePanel', {
             ],
             listeners: {
                 activate: function () {
+                    me._loadMode();
                     me._loadDevices();
                 },
             },
         });
 
         me.callParent();
+    },
+
+    _loadMode: function () {
+        var me = this;
+        if (!me.nodename) return;
+        Proxmox.Utils.API2Request({
+            url: '/nodes/' + encodeURIComponent(me.nodename) + '/ups/config/mode',
+            method: 'GET',
+            success: function (response) {
+                var mode = ((response.result || {}).data || {}).mode || 'standalone';
+                me._applyModeUI(mode);
+            },
+        });
+    },
+
+    _applyModeUI: function (mode) {
+        var me = this;
+        me._mode = mode;
+        var disBtn = me.down('#modeDisabledBtn');
+        var enBtn  = me.down('#modeEnabledBtn');
+        var lbl    = me.down('#modeLabel');
+        if (disBtn && enBtn) {
+            disBtn.toggle(mode === 'standalone', true);
+            enBtn.toggle(mode === 'netserver', true);
+        }
+        if (lbl) {
+            var stateHtml = mode === 'netserver'
+                ? '<span style="color:#4caf50;font-weight:600;">' + gettext('Enabled') + '</span>'
+                : '<span style="color:#888;">' + gettext('Disabled') + '</span>';
+            lbl.update(gettext('Network sharing:') + ' ' + stateHtml + ' &nbsp;');
+        }
+    },
+
+    _setMode: function (mode) {
+        var me = this;
+        if (!me.nodename || mode === me._mode) return;
+        Proxmox.Utils.API2Request({
+            url: '/nodes/' + encodeURIComponent(me.nodename) + '/ups/config/mode',
+            method: 'PUT',
+            params: { mode: mode },
+            waitMsgTarget: me,
+            success: function () {
+                me._applyModeUI(mode);
+                Ext.toast(gettext('Network mode updated.'));
+            },
+            failure: function (response) {
+                Ext.Msg.alert(gettext('Error'), response.htmlStatus);
+                me._loadMode();
+            },
+        });
     },
 
     _loadDevices: function () {
@@ -1451,17 +1792,29 @@ Ext.define('PVE.ups.DevicePanel', {
 
     _showDevice: function (rec) {
         var me = this;
+        var type = rec.get('type') || 'usb';
         var data = [
-            { key: gettext('Name'),            value: rec.get('name')      || '--' },
-            { key: gettext('Mode'),            value: rec.get('mode')      || '--' },
-            { key: gettext('Status'),          value: rec.get('status')    || '--' },
-            { key: gettext('Driver'),          value: rec.get('driver')    || '--' },
-            { key: gettext('Port'),            value: rec.get('port')      || '--' },
-            { key: gettext('Serial'),          value: rec.get('serial')    || '--' },
-            { key: gettext('Vendor ID (VID)'), value: rec.get('vendorid')  || '--' },
-            { key: gettext('Product ID (PID)'),value: rec.get('productid') || '--' },
-            { key: gettext('Description'),     value: rec.get('desc')      || '--' },
+            { key: gettext('Name'),   value: rec.get('name')   || '--' },
+            { key: gettext('Type'),   value: type },
+            { key: gettext('Status'), value: rec.get('status') || '--' },
         ];
+        if (type === 'usb') {
+            data.push({ key: gettext('Driver'),          value: rec.get('driver')    || '--' });
+            data.push({ key: gettext('Port'),            value: rec.get('port')      || '--' });
+            data.push({ key: gettext('Serial'),          value: rec.get('serial')    || '--' });
+            data.push({ key: gettext('Vendor ID (VID)'), value: rec.get('vendorid')  || '--' });
+            data.push({ key: gettext('Product ID (PID)'),value: rec.get('productid') || '--' });
+            data.push({ key: gettext('Description'),     value: rec.get('desc')      || '--' });
+        } else if (type === 'snmp') {
+            data.push({ key: gettext('SNMP Host'),    value: rec.get('port')         || '--' });
+            data.push({ key: gettext('Community'),    value: rec.get('community')    || '--' });
+            data.push({ key: gettext('SNMP Version'), value: rec.get('snmp_version') || '--' });
+            data.push({ key: gettext('MIBs'),         value: rec.get('mibs')         || '--' });
+            data.push({ key: gettext('Description'),  value: rec.get('desc')         || '--' });
+        } else {
+            data.push({ key: gettext('NUT Server'),  value: (rec.get('host') || '--') + ':' + (rec.get('nutport') || 3493) });
+            data.push({ key: gettext('Username'),    value: rec.get('username') || '--' });
+        }
         me._detailStore.suspendEvents();
         me._detailStore.removeAll();
         me._detailStore.add(data);
@@ -1487,9 +1840,7 @@ Ext.define('PVE.ups.DevicePanel', {
             device: deviceData || null,
             existingNames: existingNames,
             listeners: {
-                saved: function () {
-                    me._loadDevices();
-                },
+                saved: function () { me._loadDevices(); },
             },
         });
         win.show();
@@ -1506,8 +1857,7 @@ Ext.define('PVE.ups.DevicePanel', {
                 me._loadDevices();
             },
             failure: function (response) {
-                var msg = ((response.result || {}).message) || gettext('Unknown error');
-                Ext.Msg.alert(gettext('Error'), msg);
+                Ext.Msg.alert(gettext('Error'), response.htmlStatus);
             },
         });
     },

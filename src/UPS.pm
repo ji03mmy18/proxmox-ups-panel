@@ -18,7 +18,8 @@ use PVE::API2::UPS::Log;
 
 use base qw(PVE::RESTHandler);
 
-my $UPS_CONF = '/etc/nut/ups.conf';
+my $UPS_CONF    = '/etc/nut/ups.conf';
+my $UPSMON_CONF = '/etc/nut/upsmon.conf';
 
 # ── 子路徑掛載 ──────────────────────────────────────────────────────────────
 __PACKAGE__->register_method({ subclass => 'PVE::API2::UPS::Config',  path => 'config'  });
@@ -31,15 +32,34 @@ __PACKAGE__->register_method({ subclass => 'PVE::API2::UPS::Log',      path => '
 
 # ── 輔助函式 ────────────────────────────────────────────────────────────────
 
-# 讀取 ups.conf 中已設定的裝置名稱（不依賴 upsd 執行中）
+# 回傳所有可查詢的 UPS 位址：
+#   本機裝置 → "name"（upsc 預設查 localhost）
+#   遠端裝置 → "name@host:port"
 sub _list_configured_devices {
-    return () unless -f $UPS_CONF;
     my @devices;
-    open(my $fh, '<', $UPS_CONF) or return ();
-    while (<$fh>) {
-        push @devices, $1 if /^\[([^\]]+)\]/;
+
+    # 本機裝置：ups.conf section headers
+    if (-f $UPS_CONF) {
+        open(my $fh, '<', $UPS_CONF) or goto REMOTE;
+        while (<$fh>) { push @devices, $1 if /^\[([^\]]+)\]/; }
+        close $fh;
     }
-    close $fh;
+    REMOTE:
+
+    # 遠端裝置：upsmon.conf 非 localhost MONITOR 行
+    if (-f $UPSMON_CONF) {
+        open(my $fh, '<', $UPSMON_CONF) or return @devices;
+        while (<$fh>) {
+            if (/^MONITOR\s+(\S+)\s/) {
+                my $target = $1;
+                # 非 localhost 的才算遠端
+                next if $target =~ /\@localhost(?::\d+)?$/;
+                push @devices, $target;
+            }
+        }
+        close $fh;
+    }
+
     return @devices;
 }
 
@@ -81,10 +101,10 @@ __PACKAGE__->register_method({
             node => get_standard_option('pve-node'),
             ups  => {
                 type        => 'string',
-                pattern     => '[a-zA-Z0-9_@.-]+',
+                pattern     => '[a-zA-Z0-9_@.:-]+',
                 default     => 'ups',
                 optional    => 1,
-                description => 'NUT UPS 裝置名稱',
+                description => 'NUT UPS 裝置名稱（遠端：name@host:port）',
             },
         },
     },
@@ -100,15 +120,15 @@ __PACKAGE__->register_method({
         return { _no_devices => 1 } unless @devices;
 
         my $ups_name = $param->{ups} // $devices[0];
-        $ups_name =~ s/[^a-zA-Z0-9_@.-]//g;
+        $ups_name =~ s/[^a-zA-Z0-9_@.:-]//g;
         $ups_name ||= $devices[0];
 
         my $result = _run_upsc($ups_name);
         $result->{_ups_name}  = $ups_name;
         $result->{_available} = \@devices;
         $result->{_services}  = {
-            'nut-server' => _service_status('nut-server'),
-            'nut-client' => _service_status('nut-client'),
+            'nut-server'  => _service_status('nut-server'),
+            'nut-monitor' => _service_status('nut-monitor'),
         };
 
         PVE::API2::UPS::RRD::update_rrd($param->{node}, $ups_name, $result);

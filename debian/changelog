@@ -1,3 +1,43 @@
+pve-ups-panel (2.2.0) stable; urgency=medium
+
+  * Architecture: replace per-device mode (standalone/netserver/netclient)
+    with a global network-sharing toggle. Mode is now set once for the
+    whole node via GET/PUT /ups/config/mode; individual devices carry a
+    type field (usb | snmp | remote) instead.
+  * Config.pm: full rewrite. Add _device_type(), _parse_monitor_lines(),
+    _build_upsmon_conf(), _restart_services() helpers. New GET/PUT
+    /ups/config/mode endpoints write nut.conf and restart services.
+    POST /ups/config/devices now accepts type=usb|snmp|remote; usb/snmp
+    write ups.conf + upsmon.conf localhost MONITOR; remote writes
+    upsmon.conf non-localhost MONITOR only. GET /ups/config/devices
+    returns local + remote devices with type field. DELETE handles both.
+    Fix typo $_{host} → $_->{host} in localhost MONITOR grep filter.
+  * UPS.pm: _list_configured_devices() now also parses upsmon.conf
+    MONITOR lines for non-localhost targets, so remote-only setups no
+    longer show the empty state in the Overview tab. Remote devices are
+    returned as "name@host:port" so upsc can query them directly.
+    Fix service key nut-client → nut-monitor in _services response.
+    Update ups parameter pattern to allow ':' for remote addresses.
+  * pve-ups-panel.js: SetupWizard rewritten as a 4-step flow.
+    Step 1 — network access (standalone / share over network).
+    Step 2 — device type (USB / SNMP / Remote NUT Server).
+    Step 3 — connection details for the selected type.
+    Step 4 — confirm summary; onSubmit calls PUT /config/mode then
+    POST /config/devices sequentially.
+  * pve-ups-panel.js: DeviceEditWindow rewritten. Mode radio replaced
+    by type radio (USB / SNMP / Remote NUT Server). Three field groups
+    shown/hidden on type change. USB driver is now a combobox. SNMP
+    fields: host, community, version, MIBs. Remote fields include
+    inline test-connection button with spinner/check/× feedback.
+  * pve-ups-panel.js: DevicePanel gains a docked network-sharing toggle
+    bar (Disabled / Enabled buttons) that reads current mode on activate
+    and writes it via PUT /config/mode on change. Device grid adds a
+    Type column. Detail panel shows type-specific fields.
+  * pve-ups-panel.js: fix nut-client → nut-monitor in service status
+    display and restart handler throughout Overview tab.
+
+ -- YoMin Su <aaaa1234567891016@gmail.com>  Sat, 31 May 2026 00:00:00 +0800
+
 pve-ups-panel (2.1.6) stable; urgency=medium
 
   * Config.pm: preserve NOTIFYCMD/NOTIFYFLAG lines when wizard rewrites
