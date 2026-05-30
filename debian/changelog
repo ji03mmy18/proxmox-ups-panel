@@ -1,3 +1,18 @@
+pve-ups-panel (2.2.8) stable; urgency=medium
+
+  * Config.pm: fix NOTIFYFLAG lost on any device/server config change.
+    _build_upsmon_conf previously read NOTIFYFLAG from the existing
+    upsmon.conf (written by Notify.pm). If a device operation happened
+    before notification rules were first saved, there was nothing to
+    preserve, and any subsequent Config.pm rewrite would silently drop
+    NOTIFYFLAG. Fix: _build_upsmon_conf now reads notify-rules.json
+    directly (same source Notify.pm uses) to regenerate NOTIFYFLAG on
+    every rewrite. notify-rules.json is the single source of truth;
+    upsmon.conf is always consistent with it regardless of operation
+    order. Add use JSON and NUT_NOTIFY_EVENTS constant to Config.pm.
+
+ -- YoMin Su <aaaa1234567891016@gmail.com>  Sun, 01 Jun 2026 05:00:00 +0800
+
 pve-ups-panel (2.2.7) stable; urgency=medium
 
   * Architecture: device names are now plain names throughout the UI.
