@@ -1751,6 +1751,122 @@ Ext.define('PVE.ups.DeviceEditWindow', {
 });
 
 // =========================================================================
+// PVE.ups.ServerSettingsWindow — NUT Server 設定視窗
+// =========================================================================
+Ext.define('PVE.ups.ServerSettingsWindow', {
+    extend: 'Ext.window.Window',
+    alias: 'widget.pveUpsServerSettingsWindow',
+
+    title: gettext('NUT Server Settings'),
+    width: 460,
+    modal: true,
+    resizable: false,
+    nodename: null,
+
+    initComponent: function () {
+        var me = this;
+
+        me._listenField = Ext.create('Ext.form.field.Text', {
+            fieldLabel: gettext('Listen Address'),
+            name: 'listen_addr',
+            value: '0.0.0.0',
+            emptyText: '0.0.0.0',
+            regex: /^[a-zA-Z0-9.:*]+$/,
+        });
+
+        me._remoteUserField = Ext.create('Ext.form.field.Text', {
+            fieldLabel: gettext('Remote Username'),
+            name: 'remote_user',
+            value: '',
+            regex: /^[a-zA-Z0-9_-]*$/,
+            emptyText: gettext('e.g. monitor'),
+        });
+
+        me._remotePassField = Ext.create('Ext.form.field.Text', {
+            fieldLabel: gettext('Remote Password'),
+            inputType: 'password',
+            emptyText: gettext('Leave blank to keep existing'),
+        });
+
+        me._confirmPassField = Ext.create('Ext.form.field.Text', {
+            fieldLabel: gettext('Confirm Password'),
+            inputType: 'password',
+            emptyText: gettext('Leave blank to keep existing'),
+            validator: function (val) {
+                if (val !== me._remotePassField.getValue()) {
+                    return gettext('Passwords do not match.');
+                }
+                return true;
+            },
+        });
+
+        Ext.apply(me, {
+            bodyPadding: 12,
+            layout: 'anchor',
+            defaults: { anchor: '100%', labelWidth: 140 },
+            items: [
+                me._listenField,
+                { xtype: 'displayfield', value: '<span style="color:#888;font-size:11px;margin-left:145px;">' +
+                    gettext('Use 0.0.0.0 to accept connections on all interfaces.') + '</span>' },
+                { xtype: 'tbseparator', style: 'border:0;border-top:1px solid #e0e0e0;margin:8px 0;' },
+                me._remoteUserField,
+                me._remotePassField,
+                me._confirmPassField,
+                { xtype: 'displayfield', value: '<span style="color:#888;font-size:11px;margin-left:145px;">' +
+                    gettext('Remote clients use these credentials to connect as read-only monitors.') + '</span>' },
+            ],
+            buttons: [
+                {
+                    text: gettext('Save'),
+                    iconCls: 'fa fa-save',
+                    handler: function () {
+                        if (!me._listenField.isValid()) return;
+                        if (!me._remoteUserField.isValid()) return;
+                        if (!me._confirmPassField.isValid()) return;
+
+                        var pass = me._remotePassField.getValue();
+                        var params = {
+                            listen_addr: me._listenField.getValue() || '0.0.0.0',
+                            remote_user: me._remoteUserField.getValue() || '',
+                        };
+                        if (pass) params.remote_password = pass;
+
+                        me.setLoading(true);
+                        Proxmox.Utils.API2Request({
+                            url: '/nodes/' + encodeURIComponent(me.nodename) + '/ups/config/server',
+                            method: 'PUT',
+                            params: params,
+                            success: function () {
+                                me.setLoading(false);
+                                Ext.toast(gettext('Server settings saved.'));
+                                me.close();
+                            },
+                            failure: function (response) {
+                                me.setLoading(false);
+                                Ext.Msg.alert(gettext('Error'), response.htmlStatus);
+                            },
+                        });
+                    },
+                },
+                { text: gettext('Cancel'), handler: function () { me.close(); } },
+            ],
+        });
+
+        me.callParent();
+
+        // 載入現有設定
+        Proxmox.Utils.API2Request({
+            url: '/nodes/' + encodeURIComponent(me.nodename) + '/ups/config/server',
+            method: 'GET',
+            success: function (response) {
+                var d = ((response.result || {}).data) || {};
+                me._listenField.setValue(d.listen_addr || '0.0.0.0');
+                me._remoteUserField.setValue(d.remote_user || '');
+            },
+        });
+    },
+});
+
 // PVE.ups.DevicePanel — 裝置管理分頁
 // =========================================================================
 Ext.define('PVE.ups.DevicePanel', {
@@ -1812,6 +1928,19 @@ Ext.define('PVE.ups.DevicePanel', {
                     html: '<span style="color:#888;font-size:11px;">' +
                           gettext('Enabled: other computers can connect to this UPS over the network') +
                           '</span>',
+                },
+                '->',
+                {
+                    xtype: 'button',
+                    itemId: 'serverSettingsBtn',
+                    text: gettext('Server Settings'),
+                    iconCls: 'fa fa-cog',
+                    hidden: true,
+                    handler: function () {
+                        Ext.create('PVE.ups.ServerSettingsWindow', {
+                            nodename: me.nodename,
+                        }).show();
+                    },
                 },
             ],
         };
@@ -1973,9 +2102,10 @@ Ext.define('PVE.ups.DevicePanel', {
     _applyModeUI: function (mode) {
         var me = this;
         me._mode = mode;
-        var disBtn = me.down('#modeDisabledBtn');
-        var enBtn  = me.down('#modeEnabledBtn');
-        var lbl    = me.down('#modeLabel');
+        var disBtn      = me.down('#modeDisabledBtn');
+        var enBtn       = me.down('#modeEnabledBtn');
+        var lbl         = me.down('#modeLabel');
+        var settingsBtn = me.down('#serverSettingsBtn');
         if (disBtn && enBtn) {
             disBtn.toggle(mode === 'standalone', true);
             enBtn.toggle(mode === 'netserver', true);
@@ -1985,6 +2115,9 @@ Ext.define('PVE.ups.DevicePanel', {
                 ? '<span style="color:#4caf50;font-weight:600;">' + gettext('Enabled') + '</span>'
                 : '<span style="color:#888;">' + gettext('Disabled') + '</span>';
             lbl.update(gettext('Network sharing:') + ' ' + stateHtml + ' &nbsp;');
+        }
+        if (settingsBtn) {
+            settingsBtn.setVisible(mode === 'netserver');
         }
     },
 

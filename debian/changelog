@@ -1,3 +1,39 @@
+pve-ups-panel (2.2.2) stable; urgency=medium
+
+  * Config.pm: separate local and remote NUT accounts. upsmon_local
+    replaces the old hardcoded upsmon/localmonitor account. upsmon_local
+    carries upsmon master + instcmds = ALL + actions = SET, giving the
+    local monitoring process full command authority (battery tests, etc.)
+    without exposing admin credentials over the network. A separate
+    configurable slave account is written to upsd.users only when a
+    remote_user + remote_password are set via the new server endpoint.
+  * Config.pm: manage upsd.conf. _generate_upsd_conf() / _read_upsd_conf()
+    added. set_mode now writes upsd.conf automatically: standalone forces
+    LISTEN 127.0.0.1, netserver opens to 0.0.0.0 (unless a custom address
+    was already set). _fix_nut_perms now also chmods upsd.conf.
+  * Config.pm: add GET /ups/config/server → {listen_addr, remote_user,
+    has_remote_password}. Add PUT /ups/config/server → updates upsd.conf
+    listen address, rewrites upsd.users with separated accounts, and
+    normalises any localhost MONITOR entries in upsmon.conf to upsmon_local.
+    Password is preserved if remote_password parameter is omitted.
+  * Config.pm: add_device (usb/snmp) now uses upsmon_local for the
+    localhost MONITOR line. Existing localhost monitors are migrated to
+    upsmon_local on each write (upgrade compatibility). delete_device
+    normalises remaining monitors likewise.
+  * Config.pm: _get_or_create_local_password() reads the existing
+    upsmon_local password from upsd.users on each call, generating a
+    32-char random password only on first use.
+  * pve-ups-panel.js: add PVE.ups.ServerSettingsWindow. Loads current
+    listen_addr and remote_user via GET /ups/config/server; saves via
+    PUT. Password fields are optional (blank = keep existing). Confirm
+    Password field validates match client-side.
+  * pve-ups-panel.js: DevicePanel mode bar gains a right-aligned
+    "Server Settings" button (gear icon) that appears only when mode is
+    netserver and opens ServerSettingsWindow.
+  * i18n: add 11 strings for server settings in 31 languages.
+
+ -- YoMin Su <aaaa1234567891016@gmail.com>  Sat, 31 May 2026 18:00:00 +0800
+
 pve-ups-panel (2.2.1) stable; urgency=low
 
   * Config.pm: add SNMPv3 support. _generate_ups_conf writes secLevel,
