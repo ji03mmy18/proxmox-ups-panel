@@ -4,6 +4,8 @@
 ![Proxmox VE](https://img.shields.io/badge/Proxmox%20VE-7.0%2B-orange.svg)
 ![NUT](https://img.shields.io/badge/NUT-2.7%2B-green.svg)
 
+**Languages:** English | [繁體中文](docs/README.zh-TW.md)
+
 UPS management panel for Proxmox VE — integrates NUT monitoring, RRD history, battery health, automated VM/CT shutdown, and notifications directly into the node interface.
 
 ## Features
