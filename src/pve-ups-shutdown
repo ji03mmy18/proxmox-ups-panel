@@ -91,7 +91,9 @@ sub load_guests_shut {
     open(my $fh, '<', $GUESTS_FILE) or return %done;
     while (<$fh>) {
         chomp;
-        $done{int($_)} = 1 if /^\d+$/;
+        if (/^(\d+):(vm|ct)$/) {
+            $done{int($1)} = $2;
+        }
     }
     close $fh;
     return %done;
@@ -100,7 +102,7 @@ sub load_guests_shut {
 sub save_guests_shut {
     my (%done) = @_;
     open(my $fh, '>', $GUESTS_FILE) or return;
-    print $fh "$_\n" for keys %done;
+    print $fh "$_:$done{$_}\n" for keys %done;
     close $fh;
 }
 
@@ -189,7 +191,7 @@ sub poll_and_act {
 
         if ($hit) {
             action_guest($vmid, $type, $action, $timeout);
-            $shut_done{$vmid} = 1;
+            $shut_done{$vmid} = $type;
             $any_new = 1;
         }
     }
@@ -299,11 +301,15 @@ sub cmd_recover {
         next unless $shut_done{$vmid};
         next if ($rule->{action} // 'shutdown') eq 'stop';  # don't auto-restart force-stopped
 
-        log_msg("Recovery: starting guest $vmid");
+        my $type = $shut_done{$vmid};   # 'vm' or 'ct', recorded at shutdown time
+        log_msg("Recovery: starting $type $vmid");
         my $ok = 0;
-        if (system('qm',  'start', $vmid) == 0) { $ok = 1; }
-        elsif (system('pct', 'start', $vmid) == 0) { $ok = 1; }
-        log_msg("Recovery: $vmid " . ($ok ? 'started OK' : 'start failed'));
+        if ($type eq 'vm') {
+            $ok = 1 if system('qm',  'start', $vmid) == 0;
+        } else {
+            $ok = 1 if system('pct', 'start', $vmid) == 0;
+        }
+        log_msg("Recovery: $type $vmid " . ($ok ? 'started OK' : 'start failed'));
 
         sleep $interval if $interval > 0;
     }

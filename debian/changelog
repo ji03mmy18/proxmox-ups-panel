@@ -1,3 +1,12 @@
+pve-ups-panel (2.2.13) stable; urgency=medium
+
+  * Fix pve-ups-shutdown recovery always attempting both qm and pct start
+    for each guest. guests-shut now stores "vmid:type" pairs so recovery
+    uses the correct command (qm or pct) without a guaranteed failure on
+    the wrong type.
+
+ -- YoMin Su <aaaa1234567891016@gmail.com>  Sun, 31 May 2026 18:00:00 +0800
+
 pve-ups-panel (2.2.12) stable; urgency=medium
 
   * Fix file permissions for scripts in /usr/lib/pve-ups-panel/.
