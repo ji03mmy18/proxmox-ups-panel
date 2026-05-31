@@ -1,3 +1,12 @@
+pve-ups-panel (2.3.0) stable; urgency=medium
+
+  * Release v2.3.0 — automated shutdown/recovery and NUT 2.8+ compatibility.
+  * Update README.md to document all current features including shutdown
+    executor, recovery strategy, remote UPS support, NUT 2.8+ wrapper,
+    runtime state files and project structure.
+
+ -- YoMin Su <aaaa1234567891016@gmail.com>  Sun, 31 May 2026 19:00:00 +0800
+
 pve-ups-panel (2.2.13) stable; urgency=medium
 
   * Fix pve-ups-shutdown recovery always attempting both qm and pct start
