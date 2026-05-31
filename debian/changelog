@@ -1,3 +1,28 @@
+pve-ups-panel (2.2.9) stable; urgency=medium
+
+  * Add pve-ups-shutdown: new executor script that actually enforces the
+    VM/CT shutdown rules configured in the Shutdown panel.
+    - monitor <ups_target>: forks a background daemon that polls upsc
+      every 30 seconds; shuts down VMs/CTs whose per-rule charge/runtime
+      thresholds are crossed (in priority order); when global thresholds
+      are crossed the node itself is shut down via /sbin/shutdown.
+    - recover <ups_target>: stops the monitor, waits for battery charge
+      to reach charge_before_start, then restarts VMs/CTs in reverse
+      priority order (only those with action=shutdown; force-stopped
+      guests are left alone).
+    - cancel: stops the monitor and clears all state files.
+    - State tracked in /var/run/pve-ups-panel/: shutdown-monitor.pid,
+      shutdown-done, guests-shut. Config reloaded on every poll cycle
+      so live changes take effect without restart.
+  * pve-ups-notify: call pve-ups-shutdown monitor on ONBATT/LOWBATT
+    events and pve-ups-shutdown recover on ONLINE events (non-blocking
+    fork so upsmon is not held up).
+  * debian/postinst: create /var/run/pve-ups-panel/ and set +x on
+    pve-ups-shutdown.
+  * debian/pve-ups-panel.install: add pve-ups-shutdown to package.
+
+ -- YoMin Su <aaaa1234567891016@gmail.com>  Sun, 31 May 2026 18:00:00 +0800
+
 pve-ups-panel (2.2.8) stable; urgency=medium
 
   * Config.pm: fix NOTIFYFLAG lost on any device/server config change.

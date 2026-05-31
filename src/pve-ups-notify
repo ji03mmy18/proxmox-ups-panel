@@ -24,15 +24,34 @@ $ups_name ||= 'ups';
 
 my $ts = strftime('%Y-%m-%dT%H:%M:%S', localtime);
 
-my $log_dir  = '/var/log/pve-ups-panel';
-my $log_file = "$log_dir/events.log";
-my $cfg_file = '/etc/pve-ups-panel/notify-rules.json';
+my $log_dir     = '/var/log/pve-ups-panel';
+my $log_file    = "$log_dir/events.log";
+my $cfg_file    = '/etc/pve-ups-panel/notify-rules.json';
+my $shutdown_bin = '/usr/lib/pve-ups-panel/pve-ups-shutdown';
 
 # ── Log event to file ────────────────────────────────────────────────────
 mkdir $log_dir, 0755 unless -d $log_dir;
 if (open my $fh, '>>', $log_file) {
     print $fh "$ts $ups_name $event\n";
     close $fh;
+}
+
+# ── Shutdown / recovery executor ─────────────────────────────────────────
+if (-x $shutdown_bin) {
+    if ($event eq 'ONBATT' || $event eq 'LOWBATT') {
+        # Fork so upsmon is not blocked
+        my $pid = fork();
+        if (defined $pid && $pid == 0) {
+            exec $shutdown_bin, 'monitor', $ups_name;
+            exit 1;
+        }
+    } elsif ($event eq 'ONLINE') {
+        my $pid = fork();
+        if (defined $pid && $pid == 0) {
+            exec $shutdown_bin, 'recover', $ups_name;
+            exit 1;
+        }
+    }
 }
 
 # ── Load rules ───────────────────────────────────────────────────────────

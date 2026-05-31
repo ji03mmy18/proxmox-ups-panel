@@ -1,0 +1,322 @@
+#!/usr/bin/perl
+# pve-ups-shutdown — UPS shutdown/recovery executor
+# Invoked by pve-ups-notify on UPS power events.
+#
+# Usage:
+#   pve-ups-shutdown monitor <ups_target>   # ONBATT: start background threshold monitor
+#   pve-ups-shutdown cancel                 # ONLINE: stop monitor, clear state
+#   pve-ups-shutdown recover <ups_target>   # ONLINE: stop monitor + restart guests
+
+use strict;
+use warnings;
+use JSON;
+use POSIX qw(strftime setsid);
+
+my $CFG_FILE      = '/etc/pve-ups-panel/shutdown-rules.json';
+my $RUN_DIR       = '/var/run/pve-ups-panel';
+my $PID_FILE      = "$RUN_DIR/shutdown-monitor.pid";
+my $SHUT_FILE     = "$RUN_DIR/shutdown-done";
+my $GUESTS_FILE   = "$RUN_DIR/guests-shut";
+my $LOG_FILE      = '/var/log/pve-ups-panel/shutdown.log';
+my $POLL_INTERVAL = 30;
+
+my $cmd        = shift @ARGV // '';
+my $ups_target = shift @ARGV // '';
+
+mkdir $RUN_DIR, 0755             unless -d $RUN_DIR;
+mkdir '/var/log/pve-ups-panel', 0755 unless -d '/var/log/pve-ups-panel';
+
+# ── Helpers ─────────────────────────────────────────────────────────────────
+
+sub log_msg {
+    my ($msg) = @_;
+    my $ts = strftime('%Y-%m-%dT%H:%M:%S', localtime);
+    if (open my $fh, '>>', $LOG_FILE) {
+        print $fh "$ts pve-ups-shutdown[$$]: $msg\n";
+        close $fh;
+    }
+}
+
+sub read_config {
+    my $default = {
+        global   => { charge_threshold => 15, runtime_threshold => 180 },
+        rules    => [],
+        recovery => { charge_before_start => 50, interval_seconds => 30, auto_start => 1 },
+    };
+    return $default unless -f $CFG_FILE;
+    open(my $fh, '<', $CFG_FILE) or return $default;
+    my $content;
+    { local $/; $content = <$fh>; }
+    close $fh;
+    my $cfg = eval { decode_json($content) } // $default;
+    # Ensure sub-keys exist
+    $cfg->{global}   //= $default->{global};
+    $cfg->{rules}    //= [];
+    $cfg->{recovery} //= $default->{recovery};
+    return $cfg;
+}
+
+sub run_upsc {
+    my ($target) = @_;
+    my %data;
+    open(my $fh, '-|', '/bin/upsc', $target) or return %data;
+    while (<$fh>) {
+        chomp;
+        $data{$1} = $2 if /^([^:]+):\s*(.*)$/;
+    }
+    close $fh;
+    return %data;
+}
+
+sub running_guests {
+    my %guests;
+    if (open my $fh, '-|', 'qm', 'list') {
+        while (<$fh>) {
+            $guests{int($1)} = 'vm' if /^\s*(\d+)\s+\S+\s+running/;
+        }
+        close $fh;
+    }
+    if (open my $fh, '-|', 'pct', 'list') {
+        while (<$fh>) {
+            $guests{int($1)} = 'ct' if /^(\d+)\s+running/;
+        }
+        close $fh;
+    }
+    return %guests;
+}
+
+sub load_guests_shut {
+    my %done;
+    return %done unless -f $GUESTS_FILE;
+    open(my $fh, '<', $GUESTS_FILE) or return %done;
+    while (<$fh>) {
+        chomp;
+        $done{int($_)} = 1 if /^\d+$/;
+    }
+    close $fh;
+    return %done;
+}
+
+sub save_guests_shut {
+    my (%done) = @_;
+    open(my $fh, '>', $GUESTS_FILE) or return;
+    print $fh "$_\n" for keys %done;
+    close $fh;
+}
+
+sub stop_monitor {
+    return unless -f $PID_FILE;
+    open(my $fh, '<', $PID_FILE) or return;
+    my $pid = <$fh> // '';
+    close $fh;
+    chomp $pid;
+    if ($pid =~ /^\d+$/ && kill(0, $pid)) {
+        kill 'TERM', $pid;
+        sleep 1;
+        kill 'KILL', $pid if kill(0, $pid);
+        log_msg("Stopped monitor pid=$pid");
+    }
+    unlink $PID_FILE;
+}
+
+sub action_guest {
+    my ($vmid, $type, $action, $timeout) = @_;
+    $timeout //= 60;
+    if ($action eq 'stop') {
+        log_msg("Force stop $type $vmid");
+        if ($type eq 'vm') {
+            system('qm',  'stop',     $vmid);
+        } else {
+            system('pct', 'stop',     $vmid);
+        }
+    } else {
+        log_msg("Graceful shutdown $type $vmid (timeout=${timeout}s)");
+        if ($type eq 'vm') {
+            system('qm',  'shutdown', $vmid, '--timeout', $timeout);
+        } else {
+            system('pct', 'shutdown', $vmid, '--timeout', $timeout);
+        }
+    }
+}
+
+# ── Monitor poll ─────────────────────────────────────────────────────────────
+
+sub poll_and_act {
+    my ($cfg, $ups_target) = @_;
+
+    my %upsc = run_upsc($ups_target);
+    my $status  = $upsc{'ups.status'} // '';
+    my $charge  = defined $upsc{'battery.charge'}  ? int($upsc{'battery.charge'})  : undef;
+    my $runtime = defined $upsc{'battery.runtime'} ? int($upsc{'battery.runtime'}) : undef;
+
+    log_msg("Poll: status=$status charge=${\($charge//'?')}% runtime=${\($runtime//'?')}s");
+
+    # If back online, exit monitor cleanly (recover cmd handles guest restart)
+    if ($status =~ /\bOL\b/ && $status !~ /\bOB\b/) {
+        log_msg("UPS back online — monitor exiting");
+        exit 0;
+    }
+
+    return if -f $SHUT_FILE;   # node shutdown already initiated
+
+    my $global    = $cfg->{global};
+    my $g_charge  = $global->{charge_threshold}  // 15;
+    my $g_runtime = $global->{runtime_threshold} // 180;
+    my $rules     = $cfg->{rules};
+
+    my %running  = running_guests();
+    my %shut_done = load_guests_shut();
+    my $any_new   = 0;
+
+    for my $rule (sort { ($a->{priority}//999) <=> ($b->{priority}//999) } @$rules) {
+        my $vmid   = $rule->{vmid}    // next;
+        my $type   = $running{$vmid}  // next;   # skip if not running
+        next if $shut_done{$vmid};               # already handled
+
+        my $r_charge  = $rule->{charge}  // $g_charge;
+        my $r_runtime = $rule->{runtime} // $g_runtime;
+        my $trigger   = $rule->{trigger} // 'any';
+        my $action    = $rule->{action}  // 'shutdown';
+        my $timeout   = $rule->{timeout} // 60;
+
+        my $hit = 0;
+        if ($trigger eq 'any' || $trigger eq 'charge') {
+            $hit = 1 if defined $charge  && $charge  <= $r_charge;
+        }
+        if ($trigger eq 'any' || $trigger eq 'runtime') {
+            $hit = 1 if defined $runtime && $runtime <= $r_runtime;
+        }
+
+        if ($hit) {
+            action_guest($vmid, $type, $action, $timeout);
+            $shut_done{$vmid} = 1;
+            $any_new = 1;
+        }
+    }
+
+    save_guests_shut(%shut_done) if $any_new;
+
+    # Check global node shutdown threshold
+    my $node_shutdown = 0;
+    $node_shutdown = 1 if defined $charge  && $charge  <= $g_charge;
+    $node_shutdown = 1 if defined $runtime && $runtime <= $g_runtime;
+
+    if ($node_shutdown) {
+        log_msg("Global threshold reached — shutting down node "
+              . "(charge=${\($charge//'?')}% <= $g_charge or "
+              . "runtime=${\($runtime//'?')}s <= ${g_runtime}s)");
+        if (open my $fh, '>', $SHUT_FILE) { print $fh time(); close $fh; }
+        sleep 2;
+        system('/sbin/shutdown', '-h', '+0');
+        exit 0;
+    }
+}
+
+# ── Commands ─────────────────────────────────────────────────────────────────
+
+sub cmd_monitor {
+    die "Usage: pve-ups-shutdown monitor <ups_target>\n" unless $ups_target;
+
+    stop_monitor();
+
+    my $pid = fork();
+    exit 0 if $pid;           # parent exits immediately
+    die "fork: $!" unless defined $pid;
+    setsid();
+
+    open(STDIN,  '<', '/dev/null');
+    open(STDOUT, '>>', $LOG_FILE);
+    open(STDERR, '>>', $LOG_FILE);
+
+    if (open my $fh, '>', $PID_FILE) { print $fh $$; close $fh; }
+    log_msg("Monitor daemon started for $ups_target");
+
+    my $cfg = read_config();
+    while (1) {
+        eval { poll_and_act($cfg, $ups_target); };
+        log_msg("Poll error: $@") if $@;
+        sleep $POLL_INTERVAL;
+        $cfg = read_config();  # reload config live
+    }
+}
+
+sub cmd_cancel {
+    log_msg("Cancel: stopping monitor and clearing state");
+    stop_monitor();
+    unlink $SHUT_FILE   if -f $SHUT_FILE;
+    unlink $GUESTS_FILE if -f $GUESTS_FILE;
+}
+
+sub cmd_recover {
+    die "Usage: pve-ups-shutdown recover <ups_target>\n" unless $ups_target;
+
+    log_msg("Recover command received for $ups_target");
+    stop_monitor();
+
+    my %shut_done = load_guests_shut();
+    my $cfg       = read_config();
+    my $recovery  = $cfg->{recovery};
+    my $min_charge   = $recovery->{charge_before_start} // 50;
+    my $interval     = $recovery->{interval_seconds}    // 30;
+    my $auto_start   = $recovery->{auto_start}          // 1;
+
+    unlink $SHUT_FILE   if -f $SHUT_FILE;
+    unlink $GUESTS_FILE if -f $GUESTS_FILE;
+
+    unless ($auto_start && %shut_done) {
+        log_msg("Recovery: auto_start=" . ($auto_start ? 1 : 0)
+              . " guests_to_restart=" . scalar(keys %shut_done) . " — nothing to do");
+        return;
+    }
+
+    my $pid = fork();
+    if ($pid) { exit 0; }
+    die "fork: $!" unless defined $pid;
+    setsid();
+
+    open(STDIN,  '<', '/dev/null');
+    open(STDOUT, '>>', $LOG_FILE);
+    open(STDERR, '>>', $LOG_FILE);
+
+    log_msg("Recovery daemon started (pid=$$, need ${min_charge}% charge)");
+
+    # Wait until battery charge is sufficient
+    while (1) {
+        my %upsc   = run_upsc($ups_target);
+        my $charge = defined $upsc{'battery.charge'} ? int($upsc{'battery.charge'}) : 0;
+        my $status = $upsc{'ups.status'} // '';
+        log_msg("Recovery: waiting — charge=${charge}% (need ${min_charge}%) status=$status");
+        last if $charge >= $min_charge;
+        sleep 30;
+    }
+
+    log_msg("Recovery: charge threshold met, starting guests");
+
+    my $rules = $cfg->{rules};
+    # Restart in reverse priority order (highest priority number first = last to have been shut down)
+    for my $rule (sort { ($b->{priority}//999) <=> ($a->{priority}//999) } @$rules) {
+        my $vmid   = $rule->{vmid}   // next;
+        next unless $shut_done{$vmid};
+        next if ($rule->{action} // 'shutdown') eq 'stop';  # don't auto-restart force-stopped
+
+        log_msg("Recovery: starting guest $vmid");
+        my $ok = 0;
+        if (system('qm',  'start', $vmid) == 0) { $ok = 1; }
+        elsif (system('pct', 'start', $vmid) == 0) { $ok = 1; }
+        log_msg("Recovery: $vmid " . ($ok ? 'started OK' : 'start failed'));
+
+        sleep $interval if $interval > 0;
+    }
+
+    log_msg("Recovery: complete");
+    exit 0;
+}
+
+# ── Dispatch ─────────────────────────────────────────────────────────────────
+
+$ups_target =~ s/[^A-Za-z0-9_\@\.\-:]//g if $ups_target;
+
+if    ($cmd eq 'monitor') { cmd_monitor(); }
+elsif ($cmd eq 'cancel')  { cmd_cancel();  }
+elsif ($cmd eq 'recover') { cmd_recover(); }
+else  { die "Usage: pve-ups-shutdown <monitor|cancel|recover> [ups_target]\n"; }

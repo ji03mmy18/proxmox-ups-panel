@@ -153,12 +153,15 @@ nut ALL=(root) NOPASSWD: /usr/lib/pve-ups-panel/pve-ups-notify
 SUDOEOF
         chmod 0440 /etc/sudoers.d/pve-ups-panel
 
-        # ── 5b. Create event log directory ───────────────────────────────
+        # ── 5b. Create log and runtime directories ────────────────────────
         mkdir -p /var/log/pve-ups-panel
         chmod 755 /var/log/pve-ups-panel
+        mkdir -p /var/run/pve-ups-panel
+        chmod 755 /var/run/pve-ups-panel
 
         # ── 6. Enable RRD collector service ───────────────────────────────
         chmod +x /usr/lib/pve-ups-panel/pve-ups-rrd-collect
+        chmod +x /usr/lib/pve-ups-panel/pve-ups-shutdown
         systemctl daemon-reload
         systemctl enable pve-ups-panel-rrdcollect.service
         systemctl start  pve-ups-panel-rrdcollect.service
