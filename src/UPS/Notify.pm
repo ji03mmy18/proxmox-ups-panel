@@ -16,7 +16,7 @@ use base qw(PVE::RESTHandler);
 my $CONFIG_FILE = '/etc/pve-ups-panel/notify-rules.json';
 my $CONFIG_DIR  = '/etc/pve-ups-panel';
 my $UPSMON_CONF = '/etc/nut/upsmon.conf';
-my $NOTIFY_CMD  = '/usr/bin/sudo -n /usr/lib/pve-ups-panel/pve-ups-notify';
+my $NOTIFY_CMD  = '/usr/lib/pve-ups-panel/pve-ups-notifycmd';
 
 # NUT 支援 NOTIFYFLAG 的標準事件（OVERLOAD 是驅動層概念，upsmon 不接受）
 my %NUT_EVENTS = map { $_ => 1 } qw(
