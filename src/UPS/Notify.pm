@@ -30,6 +30,7 @@ my $DEFAULT_RULES = [
     { event => 'LOWBATT',   severity => 'error',   enabled => 1, targets => [], hasThreshold => 0, threshold => undef },
     { event => 'FSD',       severity => 'error',   enabled => 1, targets => [], hasThreshold => 0, threshold => undef },
     { event => 'COMMBAD',   severity => 'warning', enabled => 1, targets => [], hasThreshold => 0, threshold => undef },
+    { event => 'COMMOK',    severity => 'info',    enabled => 1, targets => [], hasThreshold => 0, threshold => undef },
     { event => 'REPLBATT',  severity => 'warning', enabled => 1, targets => [], hasThreshold => 0, threshold => undef },
     { event => 'OVERLOAD',  severity => 'warning', enabled => 0, targets => [], hasThreshold => 1, threshold => 80    },
     { event => 'VOLT_ANOM', severity => 'warning', enabled => 0, targets => [], hasThreshold => 1, threshold => 10    },

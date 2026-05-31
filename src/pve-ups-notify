@@ -81,6 +81,7 @@ my %event_desc = (
     LOWBATT   => 'UPS battery is critically low.',
     FSD       => 'UPS is performing a forced shutdown.',
     COMMBAD   => 'Communication with UPS lost.',
+    COMMOK    => 'Communication with UPS restored.',
     REPLBATT  => 'UPS battery needs replacement.',
     OVERLOAD  => 'UPS is overloaded.',
     VOLT_ANOM => 'UPS input voltage anomaly detected.',

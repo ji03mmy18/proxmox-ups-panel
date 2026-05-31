@@ -1,3 +1,12 @@
+pve-ups-panel (2.3.1) stable; urgency=medium
+
+  * Add COMMOK (Communication Restored) as a notification event type.
+    Notify.pm default rules, pve-ups-notify event description, and
+    pve-ups-panel.js _getDefaultRules all updated. The color/icon mapping
+    for COMMOK was already present in the frontend.
+
+ -- YoMin Su <aaaa1234567891016@gmail.com>  Sun, 31 May 2026 19:30:00 +0800
+
 pve-ups-panel (2.3.0) stable; urgency=medium
 
   * Release v2.3.0 — automated shutdown/recovery and NUT 2.8+ compatibility.

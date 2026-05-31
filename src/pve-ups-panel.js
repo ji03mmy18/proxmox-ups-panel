@@ -3394,8 +3394,9 @@ Ext.define('PVE.ups.Notify', {
             { event: 'ONLINE',    label: gettext('Power Restored'),     severity: 'info',    enabled: true,  targets: [], hasThreshold: false, threshold: null },
             { event: 'LOWBATT',   label: gettext('Low Battery'),        severity: 'error',   enabled: true,  targets: [], hasThreshold: false, threshold: null },
             { event: 'FSD',       label: gettext('Forced Shutdown'),    severity: 'error',   enabled: true,  targets: [], hasThreshold: false, threshold: null },
-            { event: 'COMMBAD',   label: gettext('Communication Lost'), severity: 'warning', enabled: true,  targets: [], hasThreshold: false, threshold: null },
-            { event: 'REPLBATT',  label: gettext('Replace Battery'),    severity: 'warning', enabled: true,  targets: [], hasThreshold: false, threshold: null },
+            { event: 'COMMBAD',   label: gettext('Communication Lost'),     severity: 'warning', enabled: true,  targets: [], hasThreshold: false, threshold: null },
+            { event: 'COMMOK',    label: gettext('Communication Restored'), severity: 'info',    enabled: true,  targets: [], hasThreshold: false, threshold: null },
+            { event: 'REPLBATT',  label: gettext('Replace Battery'),        severity: 'warning', enabled: true,  targets: [], hasThreshold: false, threshold: null },
             { event: 'OVERLOAD',  label: gettext('Overload'),           severity: 'warning', enabled: false, targets: [], hasThreshold: true,  threshold: 80   },
             { event: 'VOLT_ANOM', label: gettext('Voltage Anomaly'),    severity: 'warning', enabled: false, targets: [], hasThreshold: true,  threshold: 10   },
         ];
