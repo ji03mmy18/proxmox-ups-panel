@@ -351,4 +351,67 @@ __PACKAGE__->register_method({
     },
 });
 
+# ── POST /nodes/{node}/ups/battery/stop ───────────────────────────────────
+__PACKAGE__->register_method({
+    name        => 'stop_test',
+    path        => 'stop',
+    method      => 'POST',
+    description => '中止執行中的電池測試。',
+    protected   => 1,
+    proxyto     => 'node',
+    permissions => { check => ['perm', '/nodes/{node}', ['Sys.PowerMgmt']] },
+    parameters  => {
+        additionalProperties => 0,
+        properties => {
+            node => get_standard_option('pve-node'),
+            ups  => {
+                type     => 'string',
+                pattern  => '[a-zA-Z0-9_@.-]+',
+                default  => 'ups',
+                optional => 1,
+                description => 'UPS 裝置名稱',
+            },
+        },
+    },
+    returns => { type => 'null' },
+    code => sub {
+        my ($param) = @_;
+        my $ups = $param->{ups} // 'ups';
+        $ups =~ s/[^a-zA-Z0-9_.-]//g;
+        my $upsc_target = _resolve_upsc_target($ups);
+
+        my ($user, $pass) = _find_nut_admin();
+        die "No NUT user with instcmds permission found in /etc/nut/upsd.users.\n"
+            unless $user;
+
+        my %supported;
+        if (open my $lf, '-|', 'upscmd', '-l', $upsc_target) {
+            while (<$lf>) { $supported{$1} = 1 if /^(\S+)\s*-/; }
+            close $lf;
+        }
+        die "This UPS does not support 'test.battery.stop'.\n"
+            if %supported && !$supported{'test.battery.stop'};
+
+        open(my $fh, '-|', 'upscmd', '-u', $user, '-p', $pass, $upsc_target, 'test.battery.stop')
+            or die "Cannot run upscmd: $!\n";
+        my $out = do { local $/; <$fh> };
+        close $fh;
+        die "Failed to stop battery test: $out\n" unless ($? == 0);
+
+        # Mark any pending record as aborted
+        my $all = _read_all_tests();
+        my $updated = 0;
+        for my $t (@$all) {
+            next unless ($t->{ups} // '') eq $ups;
+            next unless ($t->{status} // '') eq 'pending';
+            $t->{status} = 'aborted';
+            $t->{result} = 'Aborted by user';
+            $updated = 1;
+        }
+        eval { _write_all_tests($all) } if $updated;
+
+        return undef;
+    },
+});
+
 1;

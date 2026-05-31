@@ -2529,6 +2529,7 @@ Ext.define('PVE.ups.BatteryHealth', {
         var me = this;
         me.down('[itemId=quickTestBtn]').setDisabled(disabled);
         me.down('[itemId=fullTestBtn]').setDisabled(disabled);
+        me.down('[itemId=stopTestBtn]').setDisabled(!disabled);
     },
 
     _confirmTest: function (type) {
@@ -2563,6 +2564,43 @@ Ext.define('PVE.ups.BatteryHealth', {
             icon:    type === 'quick' ? Ext.Msg.INFO : Ext.Msg.WARNING,
             fn: function (btn) {
                 if (btn === 'ok') me._runTest(type);
+            },
+        });
+    },
+
+    _confirmStop: function () {
+        var me = this;
+        Ext.Msg.show({
+            title:   gettext('Stop Battery Test'),
+            msg:     '<b>' + gettext('Stop the running battery test?') + '</b><br><br>' +
+                     gettext('The test will be aborted immediately and the UPS will return to utility power.') +
+                     '<br><br>' +
+                     gettext('Do you want to proceed?'),
+            buttons: Ext.Msg.OKCANCEL,
+            icon:    Ext.Msg.WARNING,
+            fn: function (btn) {
+                if (btn === 'ok') me._stopTest();
+            },
+        });
+    },
+
+    _stopTest: function () {
+        var me       = this;
+        var statusEl = me.down('[itemId=testStatus]');
+
+        statusEl.update('<span class="fa fa-spinner fa-spin"></span> ' + gettext('Stopping test...'));
+
+        Proxmox.Utils.API2Request({
+            url: '/nodes/' + me.nodename + '/ups/battery/stop',
+            params: { ups: me.upsName },
+            method: 'POST',
+            success: function () {
+                me._loadData();
+            },
+            failure: function (response) {
+                var err = (response.result || {}).message || gettext('Failed to stop battery test');
+                statusEl.update('<span style="color:#f44336"><span class="fa fa-times-circle"></span> ' +
+                    Ext.String.htmlEncode(err) + '</span>');
             },
         });
     },
@@ -2686,7 +2724,16 @@ Ext.define('PVE.ups.BatteryHealth', {
                                         itemId: 'fullTestBtn',
                                         text: gettext('Full Test'),
                                         iconCls: 'fa fa-battery-full',
+                                        margin: '0 6 0 0',
                                         handler: function () { me._confirmTest('full'); },
+                                    },
+                                    {
+                                        xtype: 'button',
+                                        itemId: 'stopTestBtn',
+                                        text: gettext('Stop Test'),
+                                        iconCls: 'fa fa-stop',
+                                        disabled: true,
+                                        handler: function () { me._confirmStop(); },
                                     },
                                 ],
                             },
