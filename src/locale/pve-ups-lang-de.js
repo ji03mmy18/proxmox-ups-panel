@@ -31,6 +31,7 @@ Object.assign(__proxmox_i18n_msgcat__, {
     "426493164": ["Protokoll löschen"],
     "1505290926": ["Klicken Sie auf die Schaltfläche unten, um Ihre erste USV einzurichten"],
     "866153575": ["Kommunikation verloren"],
+    "1816958571": ["Kommunikation wiederhergestellt"],
     "373171691": ["Konfigurieren"],
     "1442530053": ["Im Rechenzentrum konfiguriert"],
     "562285039": ["Bestätigen"],

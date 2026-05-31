@@ -286,6 +286,15 @@ const T = {
   ukr:"Зв'язок втрачено",he:"תקשורת אבדה",ar:"انقطع الاتصال",fa:"ارتباط قطع شد",ca:"Comunicació perduda",
   eu:"Komunikazioa galdua",gl:"Comunicación perdida",ka:"კომუნიკაცია დაიკარგა",kr:"통신 끊김",
 },
+"Communication Restored": {
+  de:"Kommunikation wiederhergestellt",fr:"Communication rétablie",es:"Comunicación restablecida",it:"Comunicazione ripristinata",pt_BR:"Comunicação restaurada",
+  ru:"Связь восстановлена",ja:"通信回復",ko:"통신 복구됨",pl:"Komunikacja przywrócona",nl:"Communicatie hersteld",
+  tr:"İletişim yeniden kuruldu",cs:"Komunikace obnovena",sv:"Kommunikation återställd",da:"Kommunikation genoprettet",nb:"Kommunikasjon gjenopprettet",
+  nn:"Kommunikasjon gjenoppretta",hu:"Kapcsolat helyreállt",hr:"Veza uspostavljena",sl:"Komunikacija vzpostavljena",bg:"Комуникацията е възстановена",
+  ukr:"Зв'язок відновлено",he:"תקשורת שוחזרה",ar:"استُعيد الاتصال",fa:"ارتباط بازگردانده شد",ca:"Comunicació restaurada",
+  eu:"Komunikazioa berreskuratua",gl:"Comunicación restaurada",ka:"კომუნიკაცია აღდგენილია",kr:"통신 복구됨",
+  zh_TW:"連線恢復",zh_CN:"通信恢复",
+},
 "Configure": {
   de:"Konfigurieren",fr:"Configurer",es:"Configurar",it:"Configura",pt_BR:"Configurar",
   ru:"Настроить",ja:"設定",ko:"구성",pl:"Konfiguruj",nl:"Configureren",
@@ -2190,7 +2199,7 @@ const LANGS = [
   { code:'ukr',   comment:'Ukrainian'           },
 ];
 
-const OUT_DIR = '/root/pve-ups-panel/src/locale';
+const OUT_DIR = __dirname;
 
 for (const lang of LANGS) {
   if (lang.code === 'en') {

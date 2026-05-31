@@ -31,6 +31,7 @@ Object.assign(__proxmox_i18n_msgcat__, {
     "426493164": ["Garbitu erregistroa"],
     "1505290926": ["Sakatu beheko botoia zure lehen UPS konfiguratzeko"],
     "866153575": ["Komunikazioa galdua"],
+    "1816958571": ["Komunikazioa berreskuratua"],
     "373171691": ["Konfiguratu"],
     "1442530053": ["Datacenter-ean konfiguratuta"],
     "562285039": ["Berretsi"],

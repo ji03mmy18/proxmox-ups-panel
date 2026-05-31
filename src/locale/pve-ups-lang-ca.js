@@ -31,6 +31,7 @@ Object.assign(__proxmox_i18n_msgcat__, {
     "426493164": ["Esborra el registre"],
     "1505290926": ["Feu clic al botó de sota per configurar el primer UPS"],
     "866153575": ["Comunicació perduda"],
+    "1816958571": ["Comunicació restaurada"],
     "373171691": ["Configura"],
     "1442530053": ["Configurat al Datacenter"],
     "562285039": ["Confirma"],

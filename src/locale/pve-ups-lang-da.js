@@ -31,6 +31,7 @@ Object.assign(__proxmox_i18n_msgcat__, {
     "426493164": ["Ryd log"],
     "1505290926": ["Klik på knappen nedenfor for at konfigurere din første UPS"],
     "866153575": ["Kommunikation tabt"],
+    "1816958571": ["Kommunikation genoprettet"],
     "373171691": ["Konfigurer"],
     "1442530053": ["Konfigureret i Datacenter"],
     "562285039": ["Bekræft"],

@@ -31,6 +31,7 @@ Object.assign(__proxmox_i18n_msgcat__, {
     "426493164": ["Limpar rexistro"],
     "1505290926": ["Prema o botón de abaixo para configurar o seu primeiro UPS"],
     "866153575": ["Comunicación perdida"],
+    "1816958571": ["Comunicación restaurada"],
     "373171691": ["Configurar"],
     "1442530053": ["Configurado no Datacenter"],
     "562285039": ["Confirmar"],

@@ -31,6 +31,7 @@ Object.assign(__proxmox_i18n_msgcat__, {
     "426493164": ["Cancella log"],
     "1505290926": ["Clicca il pulsante per configurare il tuo primo UPS"],
     "866153575": ["Comunicazione persa"],
+    "1816958571": ["Comunicazione ripristinata"],
     "373171691": ["Configura"],
     "1442530053": ["Configurato nel Datacenter"],
     "562285039": ["Conferma"],

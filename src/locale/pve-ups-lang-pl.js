@@ -31,6 +31,7 @@ Object.assign(__proxmox_i18n_msgcat__, {
     "426493164": ["Wyczyść dziennik"],
     "1505290926": ["Kliknij przycisk poniżej, aby skonfigurować pierwszego UPS"],
     "866153575": ["Utrata komunikacji"],
+    "1816958571": ["Komunikacja przywrócona"],
     "373171691": ["Konfiguruj"],
     "1442530053": ["Skonfigurowane w Datacenter"],
     "562285039": ["Potwierdź"],

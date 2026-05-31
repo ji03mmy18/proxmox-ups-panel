@@ -31,6 +31,7 @@ Object.assign(__proxmox_i18n_msgcat__, {
     "426493164": ["Obriši log"],
     "1505290926": ["Kliknite gumb ispod za postavljanje vašeg prvog UPS-a"],
     "866153575": ["Veza izgubljena"],
+    "1816958571": ["Veza uspostavljena"],
     "373171691": ["Konfiguriraj"],
     "1442530053": ["Konfigurirano u Datacenteru"],
     "562285039": ["Potvrdi"],

@@ -31,6 +31,7 @@ Object.assign(__proxmox_i18n_msgcat__, {
     "426493164": ["Günlüğü temizle"],
     "1505290926": ["İlk UPS'inizi kurmak için aşağıdaki düğmeye tıklayın"],
     "866153575": ["İletişim kesildi"],
+    "1816958571": ["İletişim yeniden kuruldu"],
     "373171691": ["Yapılandır"],
     "1442530053": ["Datacenter'da yapılandırıldı"],
     "562285039": ["Onayla"],

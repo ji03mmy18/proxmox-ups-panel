@@ -31,6 +31,7 @@ Object.assign(__proxmox_i18n_msgcat__, {
     "426493164": ["Napló törlése"],
     "1505290926": ["Kattintson az alábbi gombra az első UPS beállításához"],
     "866153575": ["Kapcsolat megszakadt"],
+    "1816958571": ["Kapcsolat helyreállt"],
     "373171691": ["Konfigurálás"],
     "1442530053": ["Adatközpontban konfigurálva"],
     "562285039": ["Megerősítés"],

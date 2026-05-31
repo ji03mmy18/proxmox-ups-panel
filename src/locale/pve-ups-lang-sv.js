@@ -31,6 +31,7 @@ Object.assign(__proxmox_i18n_msgcat__, {
     "426493164": ["Rensa logg"],
     "1505290926": ["Klicka på knappen nedan för att ställa in din första UPS"],
     "866153575": ["Kommunikation förlorad"],
+    "1816958571": ["Kommunikation återställd"],
     "373171691": ["Konfigurera"],
     "1442530053": ["Konfigurerat i Datacenter"],
     "562285039": ["Bekräfta"],

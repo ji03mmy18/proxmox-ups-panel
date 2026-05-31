@@ -31,6 +31,7 @@ Object.assign(__proxmox_i18n_msgcat__, {
     "426493164": ["Effacer le journal"],
     "1505290926": ["Cliquez sur le bouton ci-dessous pour configurer votre premier onduleur"],
     "866153575": ["Communication perdue"],
+    "1816958571": ["Communication rétablie"],
     "373171691": ["Configurer"],
     "1442530053": ["Configuré dans le Datacenter"],
     "562285039": ["Confirmer"],

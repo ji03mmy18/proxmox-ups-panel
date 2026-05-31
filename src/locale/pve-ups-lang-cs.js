@@ -31,6 +31,7 @@ Object.assign(__proxmox_i18n_msgcat__, {
     "426493164": ["Vymazat log"],
     "1505290926": ["Kliknutím na tlačítko níže nastavte svůj první UPS"],
     "866153575": ["Ztráta komunikace"],
+    "1816958571": ["Komunikace obnovena"],
     "373171691": ["Konfigurovat"],
     "1442530053": ["Nakonfigurováno v Datacentru"],
     "562285039": ["Potvrdit"],
