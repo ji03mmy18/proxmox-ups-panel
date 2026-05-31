@@ -1,3 +1,18 @@
+pve-ups-panel (2.2.10) stable; urgency=medium
+
+  * Fix NOTIFYCMD broken on NUT 2.8+. NUT 2.8 changed from system() to
+    execvp() for NOTIFYCMD invocation, so only the first word of the value
+    is used as the executable — any remaining words (flags, script path)
+    are silently ignored. The previous value
+    "/usr/bin/sudo -n /usr/lib/pve-ups-panel/pve-ups-notify" caused NUT
+    to call sudo with the notification message as the command instead of
+    the notify script.
+    Fix: introduce a single-path wrapper pve-ups-notifycmd that calls
+    sudo internally. Config.pm now writes
+    "NOTIFYCMD /usr/lib/pve-ups-panel/pve-ups-notifycmd" to upsmon.conf.
+
+ -- YoMin Su <aaaa1234567891016@gmail.com>  Sun, 31 May 2026 16:30:00 +0800
+
 pve-ups-panel (2.2.9) stable; urgency=medium
 
   * Add pve-ups-shutdown: new executor script that actually enforces the

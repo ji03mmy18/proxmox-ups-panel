@@ -161,6 +161,7 @@ SUDOEOF
 
         # ── 6. Enable RRD collector service ───────────────────────────────
         chmod +x /usr/lib/pve-ups-panel/pve-ups-rrd-collect
+        chmod +x /usr/lib/pve-ups-panel/pve-ups-notifycmd
         chmod +x /usr/lib/pve-ups-panel/pve-ups-shutdown
         systemctl daemon-reload
         systemctl enable pve-ups-panel-rrdcollect.service

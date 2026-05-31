@@ -10,6 +10,7 @@ src/pve-ups-panel.js usr/share/pve-manager/js
 src/locale/pve-ups-lang-*.js usr/share/pve-i18n
 src/pve-ups-rrd-collect usr/lib/pve-ups-panel
 src/pve-ups-notify usr/lib/pve-ups-panel
+src/pve-ups-notifycmd usr/lib/pve-ups-panel
 src/pve-ups-shutdown usr/lib/pve-ups-panel
 src/templates/ups-event-subject.txt.hbs usr/share/pve-manager/templates/default
 src/templates/ups-event-body.txt.hbs usr/share/pve-manager/templates/default

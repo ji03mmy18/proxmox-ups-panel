@@ -1,0 +1,6 @@
+#!/bin/bash
+# pve-ups-notifycmd — NUT NOTIFYCMD wrapper
+# NUT 2.8+ calls NOTIFYCMD via execvp(), treating only the first word as the
+# executable. This single-path wrapper re-invokes pve-ups-notify via sudo so
+# the full privilege chain works regardless of NUT version.
+exec /usr/bin/sudo -n /usr/lib/pve-ups-panel/pve-ups-notify "$@"

@@ -22,7 +22,7 @@ my $UPSD_CONF   = '/etc/nut/upsd.conf';
 my $UPSD_USERS  = '/etc/nut/upsd.users';
 
 # pve-ups-notify 透過 sudo 以 root 執行（sudoers.d 已在安裝時設定）
-my $NOTIFY_CMD  = '/usr/bin/sudo -n /usr/lib/pve-ups-panel/pve-ups-notify';
+my $NOTIFY_CMD  = '/usr/lib/pve-ups-panel/pve-ups-notifycmd';
 my $NOTIFY_CFG  = '/etc/pve-ups-panel/notify-rules.json';
 
 # NUT upsmon 支援的 NOTIFYFLAG 事件（與 Notify.pm 保持一致）
