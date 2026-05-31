@@ -1,3 +1,16 @@
+pve-ups-panel (2.3.2) stable; urgency=medium
+
+  * Fix full battery test failing on CyberPower and other UPS models that
+    use test.battery.start.deep instead of test.battery.start. The backend
+    now queries upscmd -l at runtime to pick the correct command.
+  * Add Stop Test button to Battery Health panel. Sends test.battery.stop
+    via upscmd and marks the pending record as aborted. Button is disabled
+    by default and only enabled while a test is in progress; a confirmation
+    dialog is shown before the command is sent.
+  * Add i18n translations for all 6 Stop Test strings across 32 locales.
+
+ -- YoMin Su <aaaa1234567891016@gmail.com>  Sun, 31 May 2026 21:00:00 +0800
+
 pve-ups-panel (2.3.1) stable; urgency=medium
 
   * Add COMMOK (Communication Restored) as a notification event type.
