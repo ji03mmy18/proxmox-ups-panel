@@ -1,3 +1,15 @@
+pve-ups-panel (2.2.12) stable; urgency=medium
+
+  * Fix file permissions for scripts in /usr/lib/pve-ups-panel/.
+    - pve-ups-notifycmd: root:nut 750 — called directly by upsmon as nut
+      user; world-execute is not needed.
+    - pve-ups-shutdown: root:root 750 — called only by pve-ups-notify
+      which already runs as root via sudo.
+    - pve-ups-notify, pve-ups-rrd-collect: tighten from 755 to 750;
+      both are only ever invoked by root (via sudo or systemd).
+
+ -- YoMin Su <aaaa1234567891016@gmail.com>  Sun, 31 May 2026 17:30:00 +0800
+
 pve-ups-panel (2.2.11) stable; urgency=medium
 
   * Fix Notify.pm reverting NOTIFYCMD to old multi-word value on every

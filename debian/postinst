@@ -160,9 +160,15 @@ SUDOEOF
         chmod 755 /var/run/pve-ups-panel
 
         # ── 6. Enable RRD collector service ───────────────────────────────
-        chmod +x /usr/lib/pve-ups-panel/pve-ups-rrd-collect
-        chmod +x /usr/lib/pve-ups-panel/pve-ups-notifycmd
-        chmod +x /usr/lib/pve-ups-panel/pve-ups-shutdown
+        # pve-ups-rrd-collect: run by systemd as root
+        chmod 750 /usr/lib/pve-ups-panel/pve-ups-rrd-collect
+        # pve-ups-notify: invoked via sudo (sudoers controls access)
+        chmod 750 /usr/lib/pve-ups-panel/pve-ups-notify
+        # pve-ups-notifycmd: called directly by upsmon (nut user) — group nut needs execute
+        chown root:nut /usr/lib/pve-ups-panel/pve-ups-notifycmd
+        chmod 750 /usr/lib/pve-ups-panel/pve-ups-notifycmd
+        # pve-ups-shutdown: called by pve-ups-notify which already runs as root
+        chmod 750 /usr/lib/pve-ups-panel/pve-ups-shutdown
         systemctl daemon-reload
         systemctl enable pve-ups-panel-rrdcollect.service
         systemctl start  pve-ups-panel-rrdcollect.service
