@@ -299,16 +299,36 @@ __PACKAGE__->register_method({
             "Add a user with 'instcmds = ALL' to enable battery testing.\n"
             unless $user;
 
-        my $cmd = ($type eq 'full') ? 'test.battery.start' : 'test.battery.start.quick';
+        # Resolve available commands from the UPS driver
+        my %supported;
+        if (open my $lf, '-|', 'upscmd', '-l', $upsc_target) {
+            while (<$lf>) { $supported{$1} = 1 if /^(\S+)\s*-/; }
+            close $lf;
+        }
+
+        my $cmd;
+        if ($type eq 'full') {
+            # Prefer .deep (CyberPower), fall back to generic .start
+            if ($supported{'test.battery.start.deep'}) {
+                $cmd = 'test.battery.start.deep';
+            } elsif ($supported{'test.battery.start'}) {
+                $cmd = 'test.battery.start';
+            } else {
+                die "This UPS does not support a full battery test " .
+                    "(neither 'test.battery.start.deep' nor 'test.battery.start' is available).\n";
+            }
+        } else {
+            $cmd = 'test.battery.start.quick';
+            die "This UPS does not support '$cmd'.\n"
+                if %supported && !$supported{$cmd};
+        }
 
         open(my $fh, '-|', 'upscmd', '-u', $user, '-p', $pass, $upsc_target, $cmd)
             or die "Cannot run upscmd: $!\n";
         my $out = do { local $/; <$fh> };
         close $fh;
         my $ok = ($? == 0);
-        die "Failed to start battery test ($cmd). " .
-            "Check NUT permissions and UPS support.\nOutput: $out\n"
-            unless $ok;
+        die "Failed to start battery test: $out\n" unless $ok;
 
         my $upsc_data = _run_upsc($upsc_target);
         my $charge    = $upsc_data->{'battery.charge'};
